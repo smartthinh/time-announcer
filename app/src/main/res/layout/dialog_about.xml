@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tvAboutSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/about_summary"
+        android:textSize="15sp"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="20dp" />
+
+    <Button
+        android:id="@+id/btnDetailIntro"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_detail_intro"
+        android:textSize="14sp"
+        android:layout_marginBottom="10dp" />
+
+    <Button
+        android:id="@+id/btnGuide"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_guide"
+        android:textSize="14sp"
+        android:layout_marginBottom="10dp" />
+
+    <Button
+        android:id="@+id/btnLicense"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_license"
+        android:textSize="14sp"
+        android:layout_marginBottom="10dp" />
+
+    <Button
+        android:id="@+id/btnSourceCode"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_source_code"
+        android:textSize="14sp"
+        android:layout_marginBottom="14dp" />
+
+    <Button
+        android:id="@+id/btnCloseAbout"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_close"
+        android:textSize="14sp" />
+
+</LinearLayout>

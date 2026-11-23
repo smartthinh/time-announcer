@@ -1,0 +1,34 @@
+# File cài đặt và chứng thư ký số (APK & Signatures)
+*.apk
+*.aab
+*.idsig
+*.keystore
+*.jks
+
+# Thư mục build và tệp biên dịch trung gian
+build/
+bin/
+out/
+gen/
+*.class
+*.dex
+
+# Tệp sinh ra bởi Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE & Editor files
+.idea/
+*.iml
+.gradle/
+.vscode/
+
+# Hệ điều hành (Windows / macOS)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Tệp nhật ký (Logs)
+*.log

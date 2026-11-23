@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Time Announcer</string>
+
+    <!-- Main Activity Controls -->
+    <string name="chk_auto_speak">Tự động đọc giờ</string>
+    <string name="btn_interval_prefix">Khoảng thời gian báo giờ: %d phút</string>
+    <string name="btn_hours_prefix">Những giờ cần thông báo (%d giờ)</string>
+    <string name="btn_tts_settings">Cài đặt công cụ TTS</string>
+    <string name="chk_play_sound">Phát âm thanh khi báo giờ</string>
+    <string name="btn_select_sound_prefix">Âm thanh: %s</string>
+    <string name="btn_language">Ngôn ngữ</string>
+    <string name="btn_about">Giới thiệu</string>
+
+    <!-- Common Dialog Buttons -->
+    <string name="btn_ok">Xác nhận</string>
+    <string name="btn_cancel">Hủy</string>
+    <string name="btn_save">Lưu</string>
+    <string name="btn_close">Đóng</string>
+    <string name="btn_select_all">Chọn tất cả</string>
+    <string name="btn_select_storage">Chọn từ bộ nhớ điện thoại</string>
+
+    <!-- Dialog Titles -->
+    <string name="dialog_interval_title">Khoảng thời gian báo giờ</string>
+    <string name="dialog_hours_title">Những giờ cần thông báo</string>
+    <string name="dialog_tts_title">Cài đặt công cụ TTS</string>
+    <string name="dialog_engine_title">Chọn công cụ TTS</string>
+    <string name="dialog_voice_title">Chọn giọng nói (%s)</string>
+    <string name="dialog_stream_title">Chọn kênh âm thanh báo giờ</string>
+    <string name="dialog_sound_title">Chọn âm thanh báo giờ</string>
+    <string name="dialog_about_title">Giới thiệu Time Announcer</string>
+    <string name="dialog_language_title">Chọn ngôn ngữ</string>
+
+    <!-- TTS Settings Controls -->
+    <string name="tts_engine_default">Công cụ TTS: Mặc định hệ thống</string>
+    <string name="tts_engine_prefix">Công cụ TTS: %s</string>
+    <string name="tts_voice_default">Giọng nói: Tự động (Mặc định)</string>
+    <string name="tts_voice_prefix">Giọng nói: %s</string>
+    <string name="tts_voice_auto_label">Tự động (Mặc định ngôn ngữ hệ thống)</string>
+    <string name="btn_select_engine">Chọn công cụ TTS</string>
+    <string name="btn_select_voice">Chọn giọng nói</string>
+    <string name="label_speed_prefix">Tốc độ đọc: %.1fx</string>
+    <string name="label_pitch_prefix">Cao độ: %.1fx</string>
+    <string name="label_volume_prefix">Âm lượng giọng nói: %d%%</string>
+    <string name="btn_select_stream_prefix">Kênh âm thanh: %s</string>
+    <string name="btn_test_voice">Nghe thử giọng nói</string>
+
+    <!-- Audio Streams -->
+    <string name="stream_media">Kênh âm lượng phương tiện</string>
+    <string name="stream_ring">Kênh âm lượng nhạc chuông</string>
+    <string name="stream_alarm">Kênh âm lượng báo thức</string>
+    <string name="stream_accessibility">Kênh âm lượng trợ năng</string>
+    <string name="stream_notification">Kênh âm lượng thông báo</string>
+
+    <!-- Toast Messages -->
+    <string name="toast_auto_speak_enabled">Đã bật tự động đọc giờ</string>
+    <string name="toast_auto_speak_disabled">Đã tắt tự động đọc giờ</string>
+    <string name="toast_hours_saved">Đã lưu danh sách giờ báo</string>
+    <string name="toast_tts_saved">Đã lưu cài đặt TTS</string>
+    <string name="toast_tts_loading">Công cụ TTS đang chuẩn bị, vui lòng thử lại sau vài giây</string>
+    <string name="toast_no_engines">Không tìm thấy công cụ TTS nào trên máy</string>
+    <string name="toast_no_voices_for_lang">Không tìm thấy giọng nói cho ngôn ngữ hiện tại (%s) trong công cụ này</string>
+    <string name="toast_no_custom_voices">Công cụ này không cung cấp danh sách giọng nói riêng</string>
+    <string name="toast_requires_lollipop">Yêu cầu Android 5.0 trở lên để chọn giọng nói chi tiết</string>
+
+    <!-- About Dialog -->
+    <string name="about_summary">Time Announcer - Ứng dụng tự động đọc giờ định kỳ và phát âm thanh chuông báo theo lịch trình.</string>
+    <string name="btn_detail_intro">Giới thiệu</string>
+    <string name="btn_guide">Hướng dẫn</string>
+    <string name="btn_license">Giấy phép</string>
+    <string name="btn_source_code">Mã nguồn</string>
+
+    <string name="about_detail_content" formatted="false">Time Announcer (Phiên bản 1.0)\n\nỨng dụng hỗ trợ bạn theo dõi thời gian liên tục mà không cần nhìn vào màn hình điện thoại.\n\nCác tính năng nổi bật:\n- Tự động đọc giờ bằng giọng nói theo khoảng thời gian tùy chọn (5, 10, 15, 20, 30, 60 phút).\n- Tùy chọn lọc các khung giờ cần thông báo từ 0 đến 23 giờ trong ngày.\n- Tùy biến công cụ TTS, lọc giọng đọc theo ngôn ngữ hệ thống, điều chỉnh tốc độ, cao độ và khuếch đại âm lượng lên tới 100% (mặc định 50%).\n- Hỗ trợ phát qua 5 kênh âm thanh độc lập (phương tiện, nhạc chuông, báo thức, trợ năng, thông báo).\n- Tích hợp phát chuông âm thanh có sẵn hoặc tệp âm thanh tự chọn từ bộ nhớ máy.\n- Chạy ngầm ổn định nhờ cơ chế xin quyền bỏ qua tối ưu hóa pin.</string>
+
+    <string name="about_guide_content">1. Tự động đọc giờ:\nBật hộp kiểm này để kích hoạt. Ứng dụng sẽ yêu cầu quyền [Bỏ qua tối ưu hóa pin], hãy xác nhận để ứng dụng luôn chạy ngầm kể cả khi tắt màn hình.\n\n2. Khoảng thời gian báo giờ:\nChọn tần suất đọc giờ trong mỗi giờ (ví dụ chọn 15 phút thì ứng dụng sẽ báo vào phút thứ 00, 15, 30, 45).\n\n3. Những giờ cần thông báo:\nTích chọn những giờ trong ngày mà bạn muốn nhận thông báo (từ 0 đến 23 giờ).\n\n4. Cài đặt công cụ TTS:\nChọn công cụ TTS, giọng đọc theo ngôn ngữ hệ thống, điều chỉnh tốc độ, cao độ, âm lượng và kênh âm thanh phát ra.\n\n5. Phát âm thanh khi báo giờ:\nBật tùy chọn này để phát chuông kèm theo trước khi đọc giờ. Bạn có thể chọn âm thanh tích hợp sẵn hoặc chọn tệp âm thanh từ bộ nhớ điện thoại.</string>
+
+    <string name="about_license_content">Ứng dụng Time Announcer được phát hành theo Giấy phép Công cộng GNU phiên bản 3 (GPL v3).\n\nĐây là phần mềm tự do nguồn mở. Bạn có toàn quyền sử dụng, nghiên cứu, sửa đổi và chia sẻ ứng dụng này.\n\nNHẮC NHỞ VỀ VIỆC PHÂN PHỐI MÃ NGUỒN:\nTheo quy định của giấy phép GPL v3, nếu bạn chỉnh sửa, đóng gói lại hoặc phân phối ứng dụng này (dưới dạng tệp APK hay bất kỳ hình thức nào khác), bạn BẮT BUỘC phải công khai toàn bộ mã nguồn theo cùng giấy phép GPL v3 và giữ nguyên thông tin bản quyền gốc.</string>
+
+    <!-- Service Notification -->
+    <string name="notification_channel_name">Kênh báo giờ tự động</string>
+    <string name="notification_channel_desc">Thông báo dịch vụ đọc giờ đang chạy nền</string>
+    <string name="notification_title">Time Announcer</string>
+    <string name="notification_text">Dịch vụ đang chạy nền để báo giờ định kỳ</string>
+
+    <!-- Time speech templates -->
+    <string name="speech_exact_hour">Bây giờ là %d giờ đúng</string>
+    <string name="speech_hour_minute">Bây giờ là %1$d giờ %2$d phút</string>
+    <string name="sample_speech">Bây giờ là 8 giờ 30 phút</string>
+</resources>

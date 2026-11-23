@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="20dp">
+
+        <CheckBox
+            android:id="@+id/chkAutoSpeak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_auto_speak"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="20dp" />
+
+        <Button
+            android:id="@+id/btnInterval"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/dialog_interval_title"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnHours"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/dialog_hours_title"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnTtsSettings"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_tts_settings"
+            android:textSize="15sp"
+            android:layout_marginBottom="20dp"
+            android:visibility="gone" />
+
+        <CheckBox
+            android:id="@+id/chkPlaySound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_play_sound"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnSelectSound"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/dialog_sound_title"
+            android:textSize="15sp"
+            android:layout_marginBottom="24dp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnLanguage"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_language"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnAbout"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_about"
+            android:textSize="15sp"
+            android:layout_marginBottom="16dp" />
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Time Announcer</string>
+
+    <!-- Main Activity Controls -->
+    <string name="chk_auto_speak">Auto speak time</string>
+    <string name="btn_interval_prefix">Announcement interval: %d minutes</string>
+    <string name="btn_hours_prefix">Hours to announce (%d hours)</string>
+    <string name="btn_tts_settings">TTS engine settings</string>
+    <string name="chk_play_sound">Play sound with announcement</string>
+    <string name="btn_select_sound_prefix">Sound: %s</string>
+    <string name="btn_language">Language</string>
+    <string name="btn_about">About</string>
+
+    <!-- Common Dialog Buttons -->
+    <string name="btn_ok">OK</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_close">Close</string>
+    <string name="btn_select_all">Select all</string>
+    <string name="btn_select_storage">Select from device storage</string>
+
+    <!-- Dialog Titles -->
+    <string name="dialog_interval_title">Announcement interval</string>
+    <string name="dialog_hours_title">Hours to announce</string>
+    <string name="dialog_tts_title">TTS engine settings</string>
+    <string name="dialog_engine_title">Select TTS engine</string>
+    <string name="dialog_voice_title">Select voice (%s)</string>
+    <string name="dialog_stream_title">Select announcement audio stream</string>
+    <string name="dialog_sound_title">Select announcement sound</string>
+    <string name="dialog_about_title">About Time Announcer</string>
+    <string name="dialog_language_title">Select language</string>
+
+    <!-- TTS Settings Controls -->
+    <string name="tts_engine_default">TTS engine: System default</string>
+    <string name="tts_engine_prefix">TTS engine: %s</string>
+    <string name="tts_voice_default">Voice: Automatic (System default)</string>
+    <string name="tts_voice_prefix">Voice: %s</string>
+    <string name="tts_voice_auto_label">Automatic (System default language)</string>
+    <string name="btn_select_engine">Select TTS engine</string>
+    <string name="btn_select_voice">Select voice</string>
+    <string name="label_speed_prefix">Speech rate: %.1fx</string>
+    <string name="label_pitch_prefix">Pitch: %.1fx</string>
+    <string name="label_volume_prefix">Speech volume: %d%%</string>
+    <string name="btn_select_stream_prefix">Audio stream: %s</string>
+    <string name="btn_test_voice">Test voice</string>
+
+    <!-- Audio Streams -->
+    <string name="stream_media">Media volume stream</string>
+    <string name="stream_ring">Ring volume stream</string>
+    <string name="stream_alarm">Alarm volume stream</string>
+    <string name="stream_accessibility">Accessibility volume stream</string>
+    <string name="stream_notification">Notification volume stream</string>
+
+    <!-- Toast Messages -->
+    <string name="toast_auto_speak_enabled">Auto speak time enabled</string>
+    <string name="toast_auto_speak_disabled">Auto speak time disabled</string>
+    <string name="toast_hours_saved">Announcement hours saved</string>
+    <string name="toast_tts_saved">TTS settings saved</string>
+    <string name="toast_tts_loading">TTS engine is initializing, please try again shortly</string>
+    <string name="toast_no_engines">No TTS engine found on this device</string>
+    <string name="toast_no_voices_for_lang">No voice found for current system language (%s) in this engine</string>
+    <string name="toast_no_custom_voices">This engine does not provide a custom voice list</string>
+    <string name="toast_requires_lollipop">Requires Android 5.0 or higher for voice selection</string>
+
+    <!-- About Dialog -->
+    <string name="about_summary">Time Announcer - An application to automatically announce time periodically and play chime sounds on a schedule.</string>
+    <string name="btn_detail_intro">About</string>
+    <string name="btn_guide">User guide</string>
+    <string name="btn_license">License</string>
+    <string name="btn_source_code">Source code</string>
+
+    <string name="about_detail_content" formatted="false">Time Announcer (Version 1.0)\n\nAn application designed to help you keep track of time seamlessly without looking at your phone screen.\n\nKey Features:\n- Automatic voice time announcement in configurable intervals (5, 10, 15, 20, 30, 60 minutes).\n- Selective announcement hours from 0 to 23 hours.\n- Customizable TTS engine, voice matched to system language, speech rate, pitch, and volume amplification up to 100% (default 50%).\n- Support for 5 independent audio streams (Media, Ring, Alarm, Accessibility, Notification).\n- Built-in chime sounds and custom audio file selection from internal storage.\n- Reliable background execution via battery optimization exemption.</string>
+
+    <string name="about_guide_content">1. Auto speak time:\nEnable this checkbox to activate. The app will request [Ignore Battery Optimization] permission. Please allow it to ensure uninterrupted background execution even when screen is off.\n\n2. Announcement interval:\nChoose how frequently time should be spoken (e.g. selecting 15 minutes announces at :00, :15, :30, and :45 of every hour).\n\n3. Hours to announce:\nSelect the specific hours of the day (0 to 23) when you want announcements to be made.\n\n4. TTS engine settings:\nConfigure your preferred TTS engine, voice for system language, speech rate, pitch, volume, and playback audio stream.\n\n5. Play sound with announcement:\nEnable this option to play a chime before speaking the time. You can choose from bundled sounds or pick an audio file from your device storage.</string>
+
+    <string name="about_license_content">Time Announcer is released under the GNU General Public License v3 (GPL v3).\n\nThis is free and open-source software. You are free to use, study, modify, and distribute this application.\n\nSOURCE CODE REDISTRIBUTION NOTICE:\nUnder the terms of the GPL v3 license, if you modify, repackage, or distribute this software (as an APK or in any other format), you MUST make the complete modified source code publicly available under the same GPL v3 license and preserve all original copyright notices.</string>
+
+    <!-- Service Notification -->
+    <string name="notification_channel_name">Time announcement channel</string>
+    <string name="notification_channel_desc">Background time announcement service notifications</string>
+    <string name="notification_title">Time Announcer</string>
+    <string name="notification_text">Service is running in background to announce time periodically</string>
+
+    <!-- Time speech templates -->
+    <string name="speech_exact_hour">It is now %d o\'clock</string>
+    <string name="speech_hour_minute">It is now %1$d %2$02d</string>
+    <string name="sample_speech">The time is now 8:30</string>
+</resources>
