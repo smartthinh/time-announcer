@@ -31,8 +31,15 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
 - **Automatic Alarm Recovery After Reboot:**
   - All enabled alarms are automatically rescheduled whenever you restart your device.
 
+- **In-App GitHub Auto-Update:**
+  - **Automatic Check on Startup:** The app now automatically checks for updates quietly in the background whenever you open it. If a newer version is found, an update window will appear to let you know.
+  - **Manual Check:** You can also manually check for updates at any time by tapping the **Check for updates** button on the main screen.
+  - **Clear Update Details:** When an update is available, you can read what is new line-by-line right inside the app before choosing to update.
+  - **One-Tap Download & Install:** Download updates directly with a smooth 0% to 100% progress bar, and automatically open the installer as soon as the download finishes.
+
 ### 🎨 UI & Usability Improvements:
-- **Streamlined Main Screen:** Simplified the main screen by combining alarm creation and management into a single, clean **"Set alarm"** button.
+- **Streamlined Main Screen:** Simplified the main screen by combining alarm creation and management into a single, clean **"Set alarm"** button, and added the dedicated **"Check for updates"** button.
+- **Cleaner About Dialog:** Removed hardcoded version numbers from the About description in both English and Vietnamese for a cleaner, unified presentation.
 - **Inline Input Hints:** Removed redundant label text lines above input fields and embedded labels directly inside the fields as hints (Hour, Minute, Snooze repeats, etc.), creating a much cleaner interface.
 - **Updated Documentation & Translations:** Updated the User Guide, About dialogs, and `README.md` with full English and Vietnamese localization.
 

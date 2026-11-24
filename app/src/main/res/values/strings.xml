@@ -70,7 +70,7 @@
     <string name="btn_license">License</string>
     <string name="btn_source_code">Source code</string>
 
-    <string name="about_detail_content" formatted="false">Time Announcer (Version 1.0)\n\nAn application designed to help you keep track of time seamlessly without looking at your phone screen.\n\nKey Features:\n- Automatic voice time announcement in configurable intervals (5, 10, 15, 20, 30, 60 minutes).\n- Selective announcement hours from 0 to 23 hours.\n- Customizable TTS engine, voice matched to system language, speech rate, pitch, and volume amplification up to 100% (default 50%).\n- Support for 5 independent audio streams (Media, Ring, Alarm, Accessibility, Notification).\n- Built-in chime sounds and custom audio file selection from internal storage.\n- Comprehensive Alarm Clock: Exact time scheduling (0-23h, 0-59m), configurable snooze count and interval, optional TTS announcement spoken while ringing, flexible repeat schedule (every day or specific days of week), system and custom storage ringtones with continuous looping and 10-minute auto-silence, plus configured alarms manager with batch deletion.\n- Reliable background execution via battery optimization exemption.</string>
+    <string name="about_detail_content" formatted="false">Time Announcer\n\nAn application designed to help you keep track of time seamlessly without looking at your phone screen.\n\nKey Features:\n- Automatic voice time announcement in configurable intervals (5, 10, 15, 20, 30, 60 minutes).\n- Selective announcement hours from 0 to 23 hours.\n- Customizable TTS engine, voice matched to system language, speech rate, pitch, and volume amplification up to 100% (default 50%).\n- Support for 5 independent audio streams (Media, Ring, Alarm, Accessibility, Notification).\n- Built-in chime sounds and custom audio file selection from internal storage.\n- Comprehensive Alarm Clock: Exact time scheduling (0-23h, 0-59m), configurable snooze count and interval, optional TTS announcement spoken while ringing, flexible repeat schedule (every day or specific days of week), system and custom storage ringtones with continuous looping and 10-minute auto-silence, plus configured alarms manager with batch deletion.\n- Reliable background execution via battery optimization exemption.</string>
 
     <string name="about_guide_content">1. Granting permissions on first launch:\nWhen opening the app for the first time, grant the necessary permissions (notifications, battery optimization exemption, and exact alarms) to ensure uninterrupted background execution and reliable alarms even when the screen is locked.\n\n2. Auto speak time:\nEnable the Auto speak time checkbox to activate periodic background time speech.\n\n3. Announcement interval:\nChoose how frequently time should be spoken (e.g. selecting 15 minutes announces at :00, :15, :30, and :45 of every hour).\n\n4. Hours to announce:\nSelect the specific hours of the day (0 to 23) when you want announcements to be made.\n\n5. TTS engine settings:\nConfigure your preferred TTS engine, voice for system language, speech rate, pitch, volume, and playback audio stream.\n\n6. Play sound with announcement:\nEnable this option to play a chime before speaking the time. You can choose from bundled sounds or pick an audio file from your device storage.\n\n7. Set alarm:\nTap Set alarm on the main screen to open the alarm manager. View and toggle your scheduled alarms, tap any alarm to edit it, or long-press to select and batch-delete. Tap the Set alarm button inside the dialog to create a new alarm: current hour and minute are auto-filled, snooze repetitions and intervals are customizable, optional TTS speech is read while ringing, repeat days and ringtones can be selected. Ringing audio loops continuously and automatically silences after 10 minutes.</string>
 
@@ -143,4 +143,15 @@
     <string name="alarm_channel_desc">Notifications and alerts when alarms go off</string>
     <string name="toast_alarm_invalid_hour">Please enter a valid hour (0 - 23)</string>
     <string name="toast_alarm_invalid_minute">Please enter a valid minute (0 - 59)</string>
+
+    <!-- Update Feature Strings -->
+    <string name="btn_check_update">Check for updates</string>
+    <string name="toast_checking_update">Checking for updates...</string>
+    <string name="toast_no_update">You are already using the latest version.</string>
+    <string name="toast_update_check_failed">Could not check for updates. Please check your internet connection.</string>
+    <string name="toast_download_failed">Failed to download update. Please try again later.</string>
+    <string name="dialog_update_title">New update available: %s</string>
+    <string name="btn_download">Download</string>
+    <string name="downloading_update">Downloading update...</string>
+    <string name="toast_permission_install_required">Please grant permission to install unknown apps to continue updating.</string>
 </resources>

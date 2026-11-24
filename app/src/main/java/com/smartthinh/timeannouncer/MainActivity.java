@@ -17,6 +17,7 @@ import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,16 +30,26 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -47,6 +58,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 
 public class MainActivity extends Activity {
@@ -69,6 +81,11 @@ public class MainActivity extends Activity {
     private AlarmItem currentEditingAlarm;
     private Button currentAlarmRingtoneBtnRef;
     private MediaPlayer alarmPreviewPlayer;
+
+    // Update button and download thread
+    private Button btnCheckUpdate;
+    private Thread downloadThread;
+    private volatile boolean isDownloadCancelled = false;
 
     // Language and About buttons
     private Button btnLanguage;
@@ -164,6 +181,7 @@ public class MainActivity extends Activity {
         chkPlaySound = findViewById(R.id.chkPlaySound);
         btnSelectSound = findViewById(R.id.btnSelectSound);
         btnAlarmList = findViewById(R.id.btnAlarmList);
+        btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
         btnLanguage = findViewById(R.id.btnLanguage);
         btnAbout = findViewById(R.id.btnAbout);
 
@@ -218,6 +236,12 @@ public class MainActivity extends Activity {
             checkExactAlarmPermission();
             showAlarmListDialog();
         });
+
+        // Button "Check for updates"
+        btnCheckUpdate.setOnClickListener(v -> checkForUpdates(true));
+
+        // Automatically check for updates in background on app launch
+        checkForUpdates(false);
 
         // Button "Language" (above About button)
         btnLanguage.setOnClickListener(v -> showLanguageDialog());
@@ -1596,6 +1620,380 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
+    // ==================== AUTO UPDATE IMPLEMENTATION ====================
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private String formatFileSize(long bytes) {
+        if (bytes <= 0) return "0 B";
+        if (bytes < 1024) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(1024));
+        String pre = ("KMGTPE").charAt(exp - 1) + "";
+        return String.format(Locale.US, "%.1f %sB", bytes / Math.pow(1024, exp), pre);
+    }
+
+    private boolean isNewerVersion(String latestVersion, String currentVersion) {
+        if (latestVersion == null || latestVersion.isEmpty()) return false;
+        if (currentVersion == null || currentVersion.isEmpty()) return true;
+
+        String cleanLatest = latestVersion.replaceAll("^[vV]", "").trim();
+        String cleanCurrent = currentVersion.replaceAll("^[vV]", "").trim();
+
+        String[] latestParts = cleanLatest.split("[.\\-_]");
+        String[] currentParts = cleanCurrent.split("[.\\-_]");
+        int length = Math.max(latestParts.length, currentParts.length);
+
+        for (int i = 0; i < length; i++) {
+            int vLatest = 0;
+            int vCurrent = 0;
+            if (i < latestParts.length) {
+                try {
+                    String num = latestParts[i].replaceAll("[^0-9].*", "");
+                    if (!num.isEmpty()) vLatest = Integer.parseInt(num);
+                } catch (Exception ignored) {}
+            }
+            if (i < currentParts.length) {
+                try {
+                    String num = currentParts[i].replaceAll("[^0-9].*", "");
+                    if (!num.isEmpty()) vCurrent = Integer.parseInt(num);
+                } catch (Exception ignored) {}
+            }
+            if (vLatest > vCurrent) return true;
+            if (vLatest < vCurrent) return false;
+        }
+        return false;
+    }
+
+    private void checkForUpdates(boolean isManual) {
+        if (isManual) {
+            Toast.makeText(this, getString(R.string.toast_checking_update), Toast.LENGTH_SHORT).show();
+        }
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL("https://api.github.com/repos/smartthinh/time-announcer/releases/latest");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("User-Agent", "TimeAnnouncer-App");
+                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    InputStream is = conn.getInputStream();
+                    StringBuilder sb = new StringBuilder();
+                    byte[] buffer = new byte[2048];
+                    int read;
+                    while ((read = is.read(buffer)) != -1) {
+                        sb.append(new String(buffer, 0, read));
+                    }
+                    is.close();
+
+                    JSONObject releaseJson = new JSONObject(sb.toString());
+                    String tagName = releaseJson.optString("tag_name", "");
+                    String releaseName = releaseJson.optString("name", tagName);
+                    String body = releaseJson.optString("body", "");
+
+                    // Find APK asset
+                    String apkUrl = "";
+                    long apkSize = 0;
+                    JSONArray assets = releaseJson.optJSONArray("assets");
+                    if (assets != null) {
+                        for (int i = 0; i < assets.length(); i++) {
+                            JSONObject asset = assets.getJSONObject(i);
+                            String assetName = asset.optString("name", "");
+                            if (assetName.toLowerCase().endsWith(".apk")) {
+                                apkUrl = asset.optString("browser_download_url", "");
+                                apkSize = asset.optLong("size", 0);
+                                break;
+                            }
+                        }
+                    }
+
+                    String currentVersion = "";
+                    try {
+                        currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                    } catch (Exception ignored) {}
+
+                    final String finalApkUrl = apkUrl;
+                    final long finalApkSize = apkSize;
+                    final String finalTagName = tagName;
+                    final String finalReleaseName = releaseName;
+                    final String finalBody = body;
+                    final String finalCurrentVersion = currentVersion;
+
+                    runOnUiThread(() -> {
+                        if (isDestroyed() || isFinishing()) return;
+                        if (isNewerVersion(finalTagName, finalCurrentVersion)) {
+                            showUpdateDialog(finalTagName, finalReleaseName, finalBody, finalApkUrl, finalApkSize);
+                        } else if (isManual) {
+                            Toast.makeText(MainActivity.this, getString(R.string.toast_no_update), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else if (isManual) {
+                    runOnUiThread(() -> {
+                        if (!isDestroyed() && !isFinishing()) {
+                            Toast.makeText(MainActivity.this, getString(R.string.toast_update_check_failed), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (isManual) {
+                    runOnUiThread(() -> {
+                        if (!isDestroyed() && !isFinishing()) {
+                            Toast.makeText(MainActivity.this, getString(R.string.toast_update_check_failed), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        }).start();
+    }
+
+    private void showUpdateDialog(String tagName, String releaseName, String body, String apkUrl, long apkSize) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_update, null);
+        builder.setView(dialogView);
+        builder.setCancelable(false);
+        AlertDialog dialog = builder.create();
+
+        TextView tvUpdateTitle = dialogView.findViewById(R.id.tvUpdateTitle);
+        LinearLayout llChangelogItems = dialogView.findViewById(R.id.llChangelogItems);
+        LinearLayout llDownloadProgress = dialogView.findViewById(R.id.llDownloadProgress);
+        ProgressBar pbDownloadProgress = dialogView.findViewById(R.id.pbDownloadProgress);
+        TextView tvDownloadPercent = dialogView.findViewById(R.id.tvDownloadPercent);
+        TextView tvDownloadBytes = dialogView.findViewById(R.id.tvDownloadBytes);
+        Button btnDownloadUpdate = dialogView.findViewById(R.id.btnDownloadUpdate);
+        Button btnCancelUpdate = dialogView.findViewById(R.id.btnCancelUpdate);
+
+        String titleText = getString(R.string.dialog_update_title, (releaseName != null && !releaseName.isEmpty()) ? releaseName : tagName);
+        tvUpdateTitle.setText(titleText);
+
+        // Split changelog by newline: each line is an individual element
+        llChangelogItems.removeAllViews();
+        if (body != null && !body.trim().isEmpty()) {
+            String[] lines = body.split("\r?\n");
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    View spacer = new View(this);
+                    spacer.setLayoutParams(new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(6)));
+                    llChangelogItems.addView(spacer);
+                    continue;
+                }
+                TextView itemTv = new TextView(this);
+                itemTv.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                itemTv.setTextSize(14f);
+                itemTv.setTextColor(0xFF333333);
+                itemTv.setPadding(0, dpToPx(2), 0, dpToPx(2));
+
+                if (trimmed.startsWith("#")) {
+                    itemTv.setText(trimmed.replaceAll("^#+\\s*", ""));
+                    itemTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    itemTv.setTextSize(15f);
+                    itemTv.setTextColor(0xFF1976D2);
+                    itemTv.setPadding(0, dpToPx(8), 0, dpToPx(4));
+                } else {
+                    itemTv.setText(trimmed);
+                }
+                llChangelogItems.addView(itemTv);
+            }
+        }
+
+        if (apkUrl == null || apkUrl.isEmpty()) {
+            btnDownloadUpdate.setEnabled(false);
+        }
+
+        btnDownloadUpdate.setOnClickListener(v -> {
+            if (apkUrl == null || apkUrl.isEmpty()) {
+                Toast.makeText(this, getString(R.string.toast_download_failed), Toast.LENGTH_SHORT).show();
+                return;
+            }
+            btnDownloadUpdate.setVisibility(View.GONE);
+            llDownloadProgress.setVisibility(View.VISIBLE);
+            pbDownloadProgress.setProgress(0);
+            tvDownloadPercent.setText("0%");
+            if (apkSize > 0) {
+                tvDownloadBytes.setText("0 B / " + formatFileSize(apkSize));
+            }
+
+            startDownloadApk(apkUrl, apkSize, pbDownloadProgress, tvDownloadPercent, tvDownloadBytes, dialog);
+        });
+
+        btnCancelUpdate.setOnClickListener(v -> {
+            isDownloadCancelled = true;
+            if (downloadThread != null && downloadThread.isAlive()) {
+                downloadThread.interrupt();
+            }
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    private void startDownloadApk(String downloadUrl, long expectedSize,
+                                  ProgressBar pb, TextView tvPercent, TextView tvBytes,
+                                  AlertDialog dialog) {
+        isDownloadCancelled = false;
+        downloadThread = new Thread(() -> {
+            File cacheDir = getCacheDir();
+            File apkFile = new File(cacheDir, "update.apk");
+            if (apkFile.exists()) {
+                apkFile.delete();
+            }
+
+            InputStream input = null;
+            FileOutputStream output = null;
+            HttpURLConnection conn = null;
+
+            try {
+                String currentUrl = downloadUrl;
+                int redirects = 0;
+                while (redirects < 8) {
+                    URL url = new URL(currentUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setInstanceFollowRedirects(true);
+                    conn.setRequestProperty("User-Agent", "TimeAnnouncer-App");
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(30000);
+                    conn.connect();
+
+                    int code = conn.getResponseCode();
+                    if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP
+                            || code == 307 || code == 308) {
+                        String newUrl = conn.getHeaderField("Location");
+                        if (newUrl != null) {
+                            currentUrl = newUrl;
+                            redirects++;
+                            conn.disconnect();
+                            continue;
+                        }
+                    }
+                    break;
+                }
+
+                long totalBytes = conn.getContentLength();
+                if (totalBytes <= 0) {
+                    totalBytes = expectedSize;
+                }
+                final long finalTotal = totalBytes;
+
+                input = conn.getInputStream();
+                output = new FileOutputStream(apkFile);
+
+                byte[] data = new byte[8192];
+                long downloadedBytes = 0;
+                int count;
+                long lastUpdateTime = 0;
+
+                while ((count = input.read(data)) != -1) {
+                    if (isDownloadCancelled || Thread.currentThread().isInterrupted()) {
+                        apkFile.delete();
+                        return;
+                    }
+                    output.write(data, 0, count);
+                    downloadedBytes += count;
+
+                    long now = System.currentTimeMillis();
+                    if (now - lastUpdateTime > 50 || downloadedBytes == finalTotal) {
+                        lastUpdateTime = now;
+                        final long curDownloaded = downloadedBytes;
+                        final int percent = (finalTotal > 0) ? (int) ((curDownloaded * 100) / finalTotal) : 0;
+                        runOnUiThread(() -> {
+                            if (!isDestroyed() && !isFinishing() && dialog.isShowing()) {
+                                pb.setProgress(percent);
+                                tvPercent.setText(percent + "%");
+                                if (finalTotal > 0) {
+                                    tvBytes.setText(formatFileSize(curDownloaded) + " / " + formatFileSize(finalTotal));
+                                } else {
+                                    tvBytes.setText(formatFileSize(curDownloaded));
+                                }
+                            }
+                        });
+                    }
+                }
+
+                output.flush();
+
+                runOnUiThread(() -> {
+                    if (!isDestroyed() && !isFinishing()) {
+                        pb.setProgress(100);
+                        tvPercent.setText("100%");
+                        if (dialog.isShowing()) {
+                            dialog.dismiss();
+                        }
+                        installApk(apkFile);
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (!isDownloadCancelled) {
+                    runOnUiThread(() -> {
+                        if (!isDestroyed() && !isFinishing()) {
+                            Toast.makeText(MainActivity.this, getString(R.string.toast_download_failed), Toast.LENGTH_SHORT).show();
+                            if (dialog.isShowing()) {
+                                dialog.dismiss();
+                            }
+                        }
+                    });
+                }
+            } finally {
+                try {
+                    if (output != null) output.close();
+                    if (input != null) input.close();
+                } catch (Exception ignored) {}
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        });
+        downloadThread.start();
+    }
+
+    private void installApk(File apkFile) {
+        if (apkFile == null || !apkFile.exists()) {
+            Toast.makeText(this, getString(R.string.toast_download_failed), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!getPackageManager().canRequestPackageInstalls()) {
+                Toast.makeText(this, getString(R.string.toast_permission_install_required), Toast.LENGTH_LONG).show();
+                Intent permIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName()));
+                startActivity(permIntent);
+                return;
+            }
+        }
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            Uri apkUri = GenericFileProvider.getUriForFile(apkFile);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        } else {
+            intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+        }
+
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, getString(R.string.toast_download_failed), Toast.LENGTH_SHORT).show();
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -1604,6 +2002,10 @@ public class MainActivity extends Activity {
         if (previewTts != null) {
             previewTts.stop();
             previewTts.shutdown();
+        }
+        isDownloadCancelled = true;
+        if (downloadThread != null && downloadThread.isAlive()) {
+            downloadThread.interrupt();
         }
     }
 

@@ -92,9 +92,16 @@ Tap the Set alarm button on the main screen to open the alarm manager dialog:
   - Tap Ringtone to select from default device alarm sounds or pick any custom audio file from your device internal storage.
   - When the alarm rings, the screen wakes up and displays the alarm alert dialog with Snooze and Dismiss buttons. The ringtone loops continuously and automatically silences after 10 minutes if unattended.
 
-### 8. Information and Support
+### 8. Checking for Updates
+The app automatically checks for new updates in the background each time you launch it. You can also tap the Check for updates button on the main screen to check manually at any time:
+- If your app is up to date, a message notifies you that you are using the latest version (when checking manually).
+- If an update is available, a dialog displays the release title and detailed changelog notes line-by-line.
+- Tap Download to start downloading the update with a smooth, real-time 0% to 100% progress bar and size counter.
+- Once downloaded, the application automatically prompts to install the new update.
+
+### 9. Information and Support
 Tap the About button at the bottom of the main screen to access:
-- About: Application summary and version details.
+- About: Application summary.
 - User guide: Quick reference explaining core features.
 - License: GNU General Public License v3 terms and source code redistribution requirements.
 - Source code: Direct link to the official GitHub project repository.
@@ -118,6 +125,7 @@ time-announcer/
 │           │               ├── AlarmManagerHelper.java
 │           │               ├── AlarmReceiver.java
 │           │               ├── BootReceiver.java
+│           │               ├── GenericFileProvider.java
 │           │               ├── MainActivity.java
 │           │               └── TimeAnnouncementService.java
 │           └── res/
@@ -129,11 +137,14 @@ time-announcer/
 │               │   ├── dialog_alarm_edit.xml
 │               │   ├── dialog_alarm_list.xml
 │               │   ├── dialog_tts_settings.xml
+│               │   ├── dialog_update.xml
 │               │   └── item_alarm.xml
 │               ├── values/
 │               │   └── strings.xml      # English resources
-│               └── values-vi/
-│                   └── strings.xml      # Vietnamese resources
+│               ├── values-vi/
+│               │   └── strings.xml      # Vietnamese resources
+│               └── xml/
+│                   └── file_paths.xml
 ├── sounds/                              # Audio source files
 ├── build_apk.bat
 ├── build_apk.py
@@ -153,6 +164,8 @@ time-announcer/
 - android.permission.VIBRATE: Enables device vibration when an alarm rings.
 - android.permission.RECEIVE_BOOT_COMPLETED: Automatically reschedules all active alarms upon device reboot.
 - android.permission.USE_FULL_SCREEN_INTENT: Allows launching the alarm alert dialog over the lock screen.
+- android.permission.INTERNET: Required to check for and download app updates from GitHub Releases.
+- android.permission.REQUEST_INSTALL_PACKAGES: Allows prompting the package installer to install downloaded update APKs.
 
 ## License
 
