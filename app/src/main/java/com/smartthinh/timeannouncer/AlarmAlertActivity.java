@@ -17,6 +17,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.util.Log;
 import android.view.View;
@@ -25,6 +26,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
 
@@ -32,7 +34,7 @@ public class AlarmAlertActivity extends Activity {
 
     private static final String TAG = "AlarmAlertActivity";
     private static final long AUTO_SILENCE_TIMEOUT_MS = 10 * 60 * 1000L; // 10 minutes auto-silence
-    private static final long TTS_REPEAT_INTERVAL_MS = 15 * 1000L; // Repeat TTS every 15s
+    private static final long TTS_REPEAT_DELAY_MS = 1000L; // 1000ms delay between readings
 
     private TextView txtAlarmTime;
     private TextView txtAlarmMessage;
@@ -223,25 +225,48 @@ public class AlarmAlertActivity extends Activity {
         SharedPreferences prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
         String engine = prefs.getString("tts_engine", "");
 
+        ttsRepeatRunnable = () -> {
+            if (isTtsReady && alarm != null && !alarm.getMessage().isEmpty()) {
+                speakTtsMessage();
+            }
+        };
+
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 isTtsReady = true;
                 applySavedTtsSettings(prefs);
-                speakTtsMessage();
 
-                // Repeat TTS message periodically while ringing
-                ttsRepeatRunnable = new Runnable() {
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override
-                    public void run() {
-                        if (isTtsReady && alarm != null && !alarm.getMessage().isEmpty()) {
-                            speakTtsMessage();
-                            handler.postDelayed(this, TTS_REPEAT_INTERVAL_MS);
-                        }
+                    public void onStart(String utteranceId) {
                     }
-                };
-                handler.postDelayed(ttsRepeatRunnable, TTS_REPEAT_INTERVAL_MS);
+
+                    @Override
+                    public void onDone(String utteranceId) {
+                        scheduleNextTtsSpeak();
+                    }
+
+                    @Override
+                    public void onError(String utteranceId) {
+                        scheduleNextTtsSpeak();
+                    }
+
+                    @Override
+                    public void onError(String utteranceId, int errorCode) {
+                        scheduleNextTtsSpeak();
+                    }
+                });
+
+                speakTtsMessage();
             }
         }, engine.isEmpty() ? null : engine);
+    }
+
+    private void scheduleNextTtsSpeak() {
+        if (handler != null && isTtsReady) {
+            handler.removeCallbacks(ttsRepeatRunnable);
+            handler.postDelayed(ttsRepeatRunnable, TTS_REPEAT_DELAY_MS);
+        }
     }
 
     private void applySavedTtsSettings(SharedPreferences prefs) {
@@ -268,21 +293,30 @@ public class AlarmAlertActivity extends Activity {
     }
 
     private void speakTtsMessage() {
-        if (tts == null || alarm == null || alarm.getMessage().isEmpty()) return;
+        if (tts == null || !isTtsReady || alarm == null || alarm.getMessage().isEmpty()) return;
         try {
+            int result;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 Bundle params = new Bundle();
                 params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_ALARM);
-                tts.speak(alarm.getMessage(), TextToSpeech.QUEUE_ADD, params, "AlarmTTS");
+                result = tts.speak(alarm.getMessage(), TextToSpeech.QUEUE_FLUSH, params, "AlarmTTS");
             } else {
-                tts.speak(alarm.getMessage(), TextToSpeech.QUEUE_ADD, null);
+                HashMap<String, String> params = new HashMap<>();
+                params.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_ALARM));
+                params.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "AlarmTTS");
+                result = tts.speak(alarm.getMessage(), TextToSpeech.QUEUE_FLUSH, params);
+            }
+            if (result != TextToSpeech.SUCCESS) {
+                scheduleNextTtsSpeak();
             }
         } catch (Exception e) {
             Log.e(TAG, "Error speaking TTS", e);
+            scheduleNextTtsSpeak();
         }
     }
 
     private void stopTts() {
+        isTtsReady = false;
         try {
             if (ttsRepeatRunnable != null && handler != null) {
                 handler.removeCallbacks(ttsRepeatRunnable);
@@ -348,6 +382,9 @@ public class AlarmAlertActivity extends Activity {
     private void cleanup() {
         if (autoSilenceRunnable != null && handler != null) {
             handler.removeCallbacks(autoSilenceRunnable);
+        }
+        if (ttsRepeatRunnable != null && handler != null) {
+            handler.removeCallbacks(ttsRepeatRunnable);
         }
         stopRingtone();
         stopVibration();
