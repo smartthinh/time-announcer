@@ -1757,6 +1757,72 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    private String extractLocalizedChangelog(String fullBody, String targetLang) {
+        if (fullBody == null || fullBody.trim().isEmpty()) {
+            return "";
+        }
+
+        String lowerTarget = (targetLang != null) ? targetLang.toLowerCase(Locale.US) : "en";
+        Map<String, StringBuilder> sections = new HashMap<>();
+        String currentSection = null;
+
+        String[] lines = fullBody.split("\r?\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            // Match language code tags like "## [vi]", "[vi]", "### [en] English", etc.
+            if (trimmed.matches("(?i)^#{0,4}\\s*\\[[a-z]{2,3}\\].*")) {
+                int start = trimmed.indexOf('[');
+                int end = trimmed.indexOf(']');
+                if (start != -1 && end > start) {
+                    currentSection = trimmed.substring(start + 1, end).toLowerCase(Locale.US);
+                    if (!sections.containsKey(currentSection)) {
+                        sections.put(currentSection, new StringBuilder());
+                    }
+                    continue; // Skip the tag header line itself
+                }
+            }
+
+            if (currentSection != null) {
+                StringBuilder sb = sections.get(currentSection);
+                if (sb != null) {
+                    if (sb.length() > 0) sb.append("\n");
+                    sb.append(line);
+                }
+            }
+        }
+
+        // If no language tags were found at all, return the raw body as-is
+        if (sections.isEmpty()) {
+            return fullBody;
+        }
+
+        // 1. Check if the user's current language section exists and is not empty
+        if (sections.containsKey(lowerTarget)) {
+            String content = sections.get(lowerTarget).toString().trim();
+            if (!content.isEmpty()) {
+                return content;
+            }
+        }
+
+        // 2. If app is using another language or if current language section is missing, fallback to English ("en")
+        if (sections.containsKey("en")) {
+            String content = sections.get("en").toString().trim();
+            if (!content.isEmpty()) {
+                return content;
+            }
+        }
+
+        // 3. Fallback to the first available section if "en" is not present
+        for (StringBuilder sb : sections.values()) {
+            String content = sb.toString().trim();
+            if (!content.isEmpty()) {
+                return content;
+            }
+        }
+
+        return fullBody;
+    }
+
     private void showUpdateDialog(String tagName, String releaseName, String body, String apkUrl, long apkSize) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_update, null);
@@ -1776,10 +1842,13 @@ public class MainActivity extends Activity {
         String titleText = getString(R.string.dialog_update_title, (releaseName != null && !releaseName.isEmpty()) ? releaseName : tagName);
         tvUpdateTitle.setText(titleText);
 
+        // Extract localized changelog according to current app language
+        String changelog = extractLocalizedChangelog(body, currentLanguage);
+
         // Split changelog by newline: each line is an individual element
         llChangelogItems.removeAllViews();
-        if (body != null && !body.trim().isEmpty()) {
-            String[] lines = body.split("\r?\n");
+        if (changelog != null && !changelog.trim().isEmpty()) {
+            String[] lines = changelog.split("\r?\n");
             for (String line : lines) {
                 String trimmed = line.trim();
                 if (trimmed.isEmpty()) {
