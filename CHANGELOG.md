@@ -4,16 +4,16 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 
 ---
 
-## [Unreleased]
+## [Version 1.1] - 2026-11-25
 
-A major update adding a comprehensive Alarm Clock feature, seamless permission handling on first launch, and a cleaner user interface.
+A major update adding a comprehensive Alarm Clock feature, seamless permission handling on first launch, automatic in-app updates, and a cleaner user interface.
 
 ### 🌟 New Features:
 - **Full-Featured Alarm Clock:**
   - **Accurate Alarm Scheduling:** Easily set hours and minutes. When creating a new alarm, the current device time is automatically filled in for you.
   - **Input Validation:** Automatically prevents typing invalid times (limits hours to 0–23 and minutes to 0–59, instantly clearing invalid entries).
   - **Smart Snooze & Repeat Controls:** Customize the maximum number of snooze repetitions (default: 3 times) and the snooze interval in minutes (default: 5 minutes).
-  - **Voice Announcements (Text-to-Speech):** Optionally enter a custom message (e.g., *"Time to wake up and get ready"*). When the alarm rings, your TTS engine reads the message aloud.
+  - **Voice Announcements (Text-to-Speech):** Optionally enter a custom message (e.g., *"Time to wake up and get ready"*). When the alarm rings, your TTS engine reads the message aloud continuously with a 1-second pause between readings.
   - **Flexible Repeat Days:** Includes an easy-to-use **Every day** button to select all days with one tap, or check individual days from Monday to Sunday (automatically selects today by default).
   - **Rich Ringtone Options:** Choose from all default system alarm ringtones with instant playback preview, or pick any music file from your device internal storage.
   - **Continuous Melody Looping:** Ringtones repeat seamlessly while ringing so the audio never stops unexpectedly.
