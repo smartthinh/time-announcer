@@ -2,6 +2,7 @@ package com.smartthinh.timeannouncer;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +16,7 @@ import android.database.Cursor;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,17 +25,25 @@ import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -43,6 +53,7 @@ public class MainActivity extends Activity {
 
     public static final String PREFS_NAME = "TimeAnnouncerPrefs";
     private static final int REQUEST_CODE_PICK_AUDIO = 202;
+    private static final int REQUEST_CODE_PICK_ALARM_AUDIO = 203;
 
     private CheckBox chkAutoSpeak;
     private Button btnInterval;
@@ -52,6 +63,13 @@ public class MainActivity extends Activity {
     // Checkbox and button for announcement sound
     private CheckBox chkPlaySound;
     private Button btnSelectSound;
+
+    // Alarm buttons
+    private Button btnSetAlarm;
+    private Button btnAlarmList;
+    private AlarmItem currentEditingAlarm;
+    private Button currentAlarmRingtoneBtnRef;
+    private MediaPlayer alarmPreviewPlayer;
 
     // Language and About buttons
     private Button btnLanguage;
@@ -146,6 +164,8 @@ public class MainActivity extends Activity {
         btnTtsSettings = findViewById(R.id.btnTtsSettings);
         chkPlaySound = findViewById(R.id.chkPlaySound);
         btnSelectSound = findViewById(R.id.btnSelectSound);
+        btnSetAlarm = findViewById(R.id.btnSetAlarm);
+        btnAlarmList = findViewById(R.id.btnAlarmList);
         btnLanguage = findViewById(R.id.btnLanguage);
         btnAbout = findViewById(R.id.btnAbout);
 
@@ -156,6 +176,7 @@ public class MainActivity extends Activity {
         loadPreferences();
         initPreviewTts(selectedEngine, null);
         updateUIState(chkAutoSpeak.isChecked());
+        updateAlarmListButtonVisibility();
 
         // Checkbox "Auto speak time"
         chkAutoSpeak.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -193,11 +214,26 @@ public class MainActivity extends Activity {
         // Button "Select sound"
         btnSelectSound.setOnClickListener(v -> showSoundSelectionDialog());
 
+        // Button "Set alarm"
+        btnSetAlarm.setOnClickListener(v -> {
+            checkExactAlarmPermission();
+            showAlarmEditDialog(null);
+        });
+
+        // Button "Configured alarms"
+        btnAlarmList.setOnClickListener(v -> showAlarmListDialog());
+
         // Button "Language" (above About button)
         btnLanguage.setOnClickListener(v -> showLanguageDialog());
 
         // Button "About"
         btnAbout.setOnClickListener(v -> showAboutDialog());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateAlarmListButtonVisibility();
     }
 
     private void updateUIState(boolean isEnabled) {
@@ -409,6 +445,26 @@ public class MainActivity extends Activity {
                 restartServiceIfRunning();
 
                 playPreviewSound(new SoundItem(selectedSoundName, selectedSoundPath, false));
+            }
+        } else if (requestCode == REQUEST_CODE_PICK_ALARM_AUDIO && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                try {
+                    final int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                } catch (Exception ignored) {}
+
+                String fileName = getFileNameFromUri(uri);
+                if (fileName == null || fileName.isEmpty()) {
+                    fileName = "Audio";
+                }
+                if (currentEditingAlarm != null) {
+                    currentEditingAlarm.setRingtoneUri(uri.toString());
+                    currentEditingAlarm.setRingtoneTitle(fileName);
+                }
+                if (currentAlarmRingtoneBtnRef != null) {
+                    currentAlarmRingtoneBtnRef.setText(getString(R.string.alarm_btn_ringtone, fileName));
+                }
             }
         }
     }
@@ -1011,10 +1067,508 @@ public class MainActivity extends Activity {
         currentLanguage = prefs.getString("app_language", "en");
     }
 
+    private void checkExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+            if (am != null && !am.canScheduleExactAlarms()) {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    startActivity(intent);
+                } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    private void updateAlarmListButtonVisibility() {
+        List<AlarmItem> list = AlarmManagerHelper.loadAlarms(this);
+        if (btnAlarmList != null) {
+            btnAlarmList.setVisibility(list.isEmpty() ? View.GONE : View.VISIBLE);
+        }
+    }
+
+    private void showAlarmEditDialog(final AlarmItem alarmToEdit) {
+        final boolean isEditMode = (alarmToEdit != null);
+        final AlarmItem currentAlarm = isEditMode ? alarmToEdit : new AlarmItem();
+
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_alarm_edit, null);
+        final EditText edtHour = dialogView.findViewById(R.id.edtAlarmHour);
+        final EditText edtMinute = dialogView.findViewById(R.id.edtAlarmMinute);
+        final EditText edtSnoozeCount = dialogView.findViewById(R.id.edtSnoozeCount);
+        final EditText edtSnoozeInterval = dialogView.findViewById(R.id.edtSnoozeInterval);
+        final EditText edtMessage = dialogView.findViewById(R.id.edtAlarmMessage);
+        final Button btnDays = dialogView.findViewById(R.id.btnAlarmDays);
+        final Button btnRingtone = dialogView.findViewById(R.id.btnAlarmRingtone);
+
+        // Auto-fill current time or existing time
+        if (isEditMode) {
+            edtHour.setText(String.format(Locale.US, "%02d", currentAlarm.getHour()));
+            edtMinute.setText(String.format(Locale.US, "%02d", currentAlarm.getMinute()));
+        } else {
+            Calendar now = Calendar.getInstance();
+            edtHour.setText(String.format(Locale.US, "%02d", now.get(Calendar.HOUR_OF_DAY)));
+            edtMinute.setText(String.format(Locale.US, "%02d", now.get(Calendar.MINUTE)));
+        }
+
+        // Limit hour 0-23: if entered > 23, clear input
+        edtHour.addTextChangedListener(new TextWatcher() {
+            private boolean isEditing = false;
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (isEditing) return;
+                if (s.length() > 0) {
+                    try {
+                        int val = Integer.parseInt(s.toString());
+                        if (val > 23) {
+                            isEditing = true;
+                            s.clear();
+                            isEditing = false;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        });
+
+        // Limit minute 0-59: if entered > 59, clear input
+        edtMinute.addTextChangedListener(new TextWatcher() {
+            private boolean isEditing = false;
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (isEditing) return;
+                if (s.length() > 0) {
+                    try {
+                        int val = Integer.parseInt(s.toString());
+                        if (val > 59) {
+                            isEditing = true;
+                            s.clear();
+                            isEditing = false;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        });
+
+        edtSnoozeCount.setText(String.valueOf(currentAlarm.getSnoozeCount()));
+        edtSnoozeInterval.setText(String.valueOf(currentAlarm.getSnoozeMinutes()));
+        edtMessage.setText(currentAlarm.getMessage());
+
+        btnDays.setText(getString(R.string.alarm_btn_days, currentAlarm.getFormattedDays(this)));
+        btnDays.setOnClickListener(v -> showAlarmDaysDialog(currentAlarm, btnDays));
+
+        String rName = currentAlarm.getRingtoneTitle();
+        if (rName == null || rName.isEmpty()) {
+            rName = getString(R.string.alarm_ringtone_default);
+        }
+        btnRingtone.setText(getString(R.string.alarm_btn_ringtone, rName));
+        btnRingtone.setOnClickListener(v -> showAlarmRingtoneDialog(currentAlarm, btnRingtone));
+
+        String title = isEditMode ? getString(R.string.alarm_dialog_edit_title) : getString(R.string.alarm_dialog_set_title);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(dialogView)
+                .setPositiveButton(getString(R.string.btn_ok), null)
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            Button okButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            okButton.setOnClickListener(v -> {
+                String hStr = edtHour.getText().toString().trim();
+                if (hStr.isEmpty()) {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_invalid_hour), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                int hour = Integer.parseInt(hStr);
+                if (hour < 0 || hour > 23) {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_invalid_hour), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                String mStr = edtMinute.getText().toString().trim();
+                if (mStr.isEmpty()) {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_invalid_minute), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                int minute = Integer.parseInt(mStr);
+                if (minute < 0 || minute > 59) {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_invalid_minute), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                int snoozeCount = 3;
+                try {
+                    String scStr = edtSnoozeCount.getText().toString().trim();
+                    if (!scStr.isEmpty()) snoozeCount = Integer.parseInt(scStr);
+                } catch (Exception ignored) {}
+
+                int snoozeInterval = 5;
+                try {
+                    String siStr = edtSnoozeInterval.getText().toString().trim();
+                    if (!siStr.isEmpty()) snoozeInterval = Integer.parseInt(siStr);
+                } catch (Exception ignored) {}
+
+                String message = edtMessage.getText().toString().trim();
+
+                currentAlarm.setHour(hour);
+                currentAlarm.setMinute(minute);
+                currentAlarm.setSnoozeCount(snoozeCount);
+                currentAlarm.setRemainingSnoozeCount(snoozeCount);
+                currentAlarm.setSnoozeMinutes(snoozeInterval);
+                currentAlarm.setMessage(message);
+                currentAlarm.setEnabled(true);
+
+                AlarmManagerHelper.saveOrUpdateAlarm(MainActivity.this, currentAlarm);
+                updateAlarmListButtonVisibility();
+
+                if (isEditMode) {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_updated), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_saved, currentAlarm.getFormattedTime()), Toast.LENGTH_SHORT).show();
+                }
+
+                dialog.dismiss();
+            });
+        });
+
+        dialog.show();
+    }
+
+    private void showAlarmDaysDialog(final AlarmItem alarm, final Button btnDaysRef) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_alarm_days, null);
+        CheckBox chkEveryday = dialogView.findViewById(R.id.chkAlarmEveryday);
+        CheckBox[] chkDays = {
+                dialogView.findViewById(R.id.chkDayMon),
+                dialogView.findViewById(R.id.chkDayTue),
+                dialogView.findViewById(R.id.chkDayWed),
+                dialogView.findViewById(R.id.chkDayThu),
+                dialogView.findViewById(R.id.chkDayFri),
+                dialogView.findViewById(R.id.chkDaySat),
+                dialogView.findViewById(R.id.chkDaySun)
+        };
+
+        final boolean[] tempDays = new boolean[7];
+        System.arraycopy(alarm.getDaysOfWeek(), 0, tempDays, 0, 7);
+
+        for (int i = 0; i < 7; i++) {
+            chkDays[i].setChecked(tempDays[i]);
+        }
+        chkEveryday.setChecked(alarm.isEveryDay());
+
+        final boolean[] isProgrammatic = {false};
+
+        chkEveryday.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isProgrammatic[0]) return;
+            isProgrammatic[0] = true;
+            for (int i = 0; i < 7; i++) {
+                chkDays[i].setChecked(isChecked);
+                tempDays[i] = isChecked;
+            }
+            isProgrammatic[0] = false;
+        });
+
+        CompoundButton.OnCheckedChangeListener dayListener = (buttonView, isChecked) -> {
+            if (isProgrammatic[0]) return;
+            boolean allChecked = true;
+            for (int i = 0; i < 7; i++) {
+                tempDays[i] = chkDays[i].isChecked();
+                if (!tempDays[i]) allChecked = false;
+            }
+            isProgrammatic[0] = true;
+            chkEveryday.setChecked(allChecked);
+            isProgrammatic[0] = false;
+        };
+
+        for (CheckBox cb : chkDays) {
+            cb.setOnCheckedChangeListener(dayListener);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.alarm_days_title))
+                .setView(dialogView)
+                .setPositiveButton(getString(R.string.btn_ok), (dialog, which) -> {
+                    alarm.setDaysOfWeek(tempDays);
+                    btnDaysRef.setText(getString(R.string.alarm_btn_days, alarm.getFormattedDays(MainActivity.this)));
+                })
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show();
+    }
+
+    private void showAlarmRingtoneDialog(final AlarmItem alarm, final Button btnRingtoneRef) {
+        RingtoneManager rm = new RingtoneManager(this);
+        rm.setType(RingtoneManager.TYPE_ALARM);
+        Cursor cursor = null;
+        try {
+            cursor = rm.getCursor();
+        } catch (Exception ignored) {}
+
+        final List<String> titles = new ArrayList<>();
+        final List<String> uriStrings = new ArrayList<>();
+
+        titles.add(getString(R.string.alarm_ringtone_default));
+        uriStrings.add("");
+
+        if (cursor != null) {
+            try {
+                while (cursor.moveToNext()) {
+                    String title = cursor.getString(RingtoneManager.TITLE_COLUMN_INDEX);
+                    Uri uri = rm.getRingtoneUri(cursor.getPosition());
+                    titles.add(title);
+                    uriStrings.add(uri != null ? uri.toString() : "");
+                }
+            } catch (Exception ignored) {}
+        }
+
+        int checkedIndex = 0;
+        String currentUri = alarm.getRingtoneUri();
+        if (currentUri != null && !currentUri.isEmpty()) {
+            for (int i = 0; i < uriStrings.size(); i++) {
+                if (currentUri.equals(uriStrings.get(i))) {
+                    checkedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        final int[] selectedIndex = {checkedIndex};
+        String[] items = titles.toArray(new String[0]);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.alarm_ringtone_title));
+        builder.setSingleChoiceItems(items, checkedIndex, (dialog, which) -> {
+            selectedIndex[0] = which;
+            playAlarmPreview(uriStrings.get(which));
+        });
+
+        builder.setPositiveButton(getString(R.string.btn_ok), (dialog, which) -> {
+            stopAlarmPreview();
+            int idx = selectedIndex[0];
+            alarm.setRingtoneUri(uriStrings.get(idx));
+            alarm.setRingtoneTitle(titles.get(idx));
+            btnRingtoneRef.setText(getString(R.string.alarm_btn_ringtone, titles.get(idx)));
+        });
+
+        builder.setNeutralButton(getString(R.string.btn_select_storage), (dialog, which) -> {
+            stopAlarmPreview();
+            openAlarmStorageFilePicker(alarm, btnRingtoneRef);
+        });
+
+        builder.setNegativeButton(getString(R.string.btn_cancel), (dialog, which) -> stopAlarmPreview());
+        builder.setOnCancelListener(dialog -> stopAlarmPreview());
+        builder.show();
+    }
+
+    private void openAlarmStorageFilePicker(AlarmItem alarm, Button btnRingtone) {
+        currentEditingAlarm = alarm;
+        currentAlarmRingtoneBtnRef = btnRingtone;
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("audio/*");
+            startActivityForResult(intent, REQUEST_CODE_PICK_ALARM_AUDIO);
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+                fallback.setType("audio/*");
+                startActivityForResult(fallback, REQUEST_CODE_PICK_ALARM_AUDIO);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private void playAlarmPreview(String uriStr) {
+        stopAlarmPreview();
+        try {
+            alarmPreviewPlayer = new MediaPlayer();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                alarmPreviewPlayer.setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build());
+            } else {
+                alarmPreviewPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
+            }
+
+            Uri uri = (uriStr == null || uriStr.isEmpty()) ?
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) :
+                    Uri.parse(uriStr);
+
+            if (uri != null) {
+                alarmPreviewPlayer.setDataSource(this, uri);
+                alarmPreviewPlayer.prepare();
+                alarmPreviewPlayer.start();
+            }
+        } catch (Exception e) {
+            stopAlarmPreview();
+        }
+    }
+
+    private void stopAlarmPreview() {
+        try {
+            if (alarmPreviewPlayer != null) {
+                if (alarmPreviewPlayer.isPlaying()) {
+                    alarmPreviewPlayer.stop();
+                }
+                alarmPreviewPlayer.release();
+                alarmPreviewPlayer = null;
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void showAlarmListDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_alarm_list, null);
+        final LinearLayout llMultiSelectActions = dialogView.findViewById(R.id.llMultiSelectActions);
+        final Button btnSelectAll = dialogView.findViewById(R.id.btnSelectAll);
+        final Button btnDeleteSelected = dialogView.findViewById(R.id.btnDeleteSelected);
+        final Button btnCancelMultiSelect = dialogView.findViewById(R.id.btnCancelMultiSelect);
+        final TextView txtEmptyAlarms = dialogView.findViewById(R.id.txtEmptyAlarms);
+        final LinearLayout llContainer = dialogView.findViewById(R.id.llAlarmListContainer);
+        final LinearLayout llNormalActions = dialogView.findViewById(R.id.llNormalActions);
+        final Button btnAddAlarm = dialogView.findViewById(R.id.btnAddAlarmFromList);
+        final Button btnClose = dialogView.findViewById(R.id.btnCloseAlarmList);
+
+        final boolean[] isMultiSelectMode = {false};
+        final Set<Long> selectedIds = new HashSet<>();
+
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.alarm_list_title))
+                .setView(dialogView)
+                .create();
+
+        final Runnable renderList = new Runnable() {
+            @Override
+            public void run() {
+                llContainer.removeAllViews();
+                List<AlarmItem> alarms = AlarmManagerHelper.loadAlarms(MainActivity.this);
+
+                if (alarms.isEmpty()) {
+                    txtEmptyAlarms.setVisibility(View.VISIBLE);
+                    llMultiSelectActions.setVisibility(View.GONE);
+                    llNormalActions.setVisibility(View.VISIBLE);
+                    return;
+                } else {
+                    txtEmptyAlarms.setVisibility(View.GONE);
+                }
+
+                if (isMultiSelectMode[0]) {
+                    llMultiSelectActions.setVisibility(View.VISIBLE);
+                    llNormalActions.setVisibility(View.GONE);
+                } else {
+                    llMultiSelectActions.setVisibility(View.GONE);
+                    llNormalActions.setVisibility(View.VISIBLE);
+                }
+
+                LayoutInflater inflater = LayoutInflater.from(MainActivity.this);
+                for (final AlarmItem alarm : alarms) {
+                    View itemView = inflater.inflate(R.layout.item_alarm, llContainer, false);
+                    LinearLayout llNormal = itemView.findViewById(R.id.llNormalMode);
+                    Button btnAlarm = itemView.findViewById(R.id.btnAlarmItem);
+                    Switch switchAlarm = itemView.findViewById(R.id.switchAlarm);
+                    CheckBox chkAlarm = itemView.findViewById(R.id.chkAlarmItem);
+
+                    StringBuilder label = new StringBuilder();
+                    label.append(alarm.getFormattedTime()).append("  (").append(alarm.getFormattedDays(MainActivity.this)).append(")");
+                    if (!alarm.getMessage().isEmpty()) {
+                        label.append("\n").append(alarm.getMessage());
+                    }
+
+                    if (!isMultiSelectMode[0]) {
+                        llNormal.setVisibility(View.VISIBLE);
+                        chkAlarm.setVisibility(View.GONE);
+                        btnAlarm.setText(label.toString());
+                        switchAlarm.setChecked(alarm.isEnabled());
+
+                        // Click to edit alarm
+                        btnAlarm.setOnClickListener(v -> {
+                            dialog.dismiss();
+                            showAlarmEditDialog(alarm);
+                        });
+
+                        // Long click to switch into multi-select mode
+                        btnAlarm.setOnLongClickListener(v -> {
+                            isMultiSelectMode[0] = true;
+                            selectedIds.clear();
+                            selectedIds.add(alarm.getId());
+                            run();
+                            return true;
+                        });
+
+                        // Toggle switch
+                        switchAlarm.setOnCheckedChangeListener((btn, isChecked) -> {
+                            alarm.setEnabled(isChecked);
+                            AlarmManagerHelper.saveOrUpdateAlarm(MainActivity.this, alarm);
+                            String msg = isChecked ?
+                                    getString(R.string.toast_alarm_saved, alarm.getFormattedTime()) :
+                                    getString(R.string.toast_alarm_dismissed);
+                            Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        });
+                    } else {
+                        llNormal.setVisibility(View.GONE);
+                        chkAlarm.setVisibility(View.VISIBLE);
+                        chkAlarm.setText(label.toString());
+                        chkAlarm.setChecked(selectedIds.contains(alarm.getId()));
+
+                        chkAlarm.setOnCheckedChangeListener((btn, isChecked) -> {
+                            if (isChecked) {
+                                selectedIds.add(alarm.getId());
+                            } else {
+                                selectedIds.remove(alarm.getId());
+                            }
+                        });
+                    }
+
+                    llContainer.addView(itemView);
+                }
+            }
+        };
+
+        btnSelectAll.setOnClickListener(v -> {
+            List<AlarmItem> alarms = AlarmManagerHelper.loadAlarms(MainActivity.this);
+            if (selectedIds.size() == alarms.size()) {
+                selectedIds.clear();
+            } else {
+                for (AlarmItem a : alarms) {
+                    selectedIds.add(a.getId());
+                }
+            }
+            renderList.run();
+        });
+
+        btnDeleteSelected.setOnClickListener(v -> {
+            if (selectedIds.isEmpty()) return;
+            int count = selectedIds.size();
+            AlarmManagerHelper.deleteAlarms(MainActivity.this, new ArrayList<>(selectedIds));
+            selectedIds.clear();
+            isMultiSelectMode[0] = false;
+            updateAlarmListButtonVisibility();
+            renderList.run();
+            Toast.makeText(MainActivity.this, getString(R.string.toast_alarm_deleted, count), Toast.LENGTH_SHORT).show();
+        });
+
+        btnCancelMultiSelect.setOnClickListener(v -> {
+            isMultiSelectMode[0] = false;
+            selectedIds.clear();
+            renderList.run();
+        });
+
+        btnAddAlarm.setOnClickListener(v -> {
+            dialog.dismiss();
+            showAlarmEditDialog(null);
+        });
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        renderList.run();
+        dialog.show();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         stopPreviewSound();
+        stopAlarmPreview();
         if (previewTts != null) {
             previewTts.stop();
             previewTts.shutdown();

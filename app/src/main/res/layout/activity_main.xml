@@ -67,6 +67,23 @@
             android:visibility="gone" />
 
         <Button
+            android:id="@+id/btnSetAlarm"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_set_alarm"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnAlarmList"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_alarm_list"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/btnLanguage"
             android:layout_width="match_parent"
             android:layout_height="50dp"
