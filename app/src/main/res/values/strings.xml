@@ -70,9 +70,9 @@
     <string name="btn_license">License</string>
     <string name="btn_source_code">Source code</string>
 
-    <string name="about_detail_content" formatted="false">Time Announcer (Version 1.0)\n\nAn application designed to help you keep track of time seamlessly without looking at your phone screen.\n\nKey Features:\n- Automatic voice time announcement in configurable intervals (5, 10, 15, 20, 30, 60 minutes).\n- Selective announcement hours from 0 to 23 hours.\n- Customizable TTS engine, voice matched to system language, speech rate, pitch, and volume amplification up to 100% (default 50%).\n- Support for 5 independent audio streams (Media, Ring, Alarm, Accessibility, Notification).\n- Built-in chime sounds and custom audio file selection from internal storage.\n- Reliable background execution via battery optimization exemption.</string>
+    <string name="about_detail_content" formatted="false">Time Announcer (Version 1.0)\n\nAn application designed to help you keep track of time seamlessly without looking at your phone screen.\n\nKey Features:\n- Automatic voice time announcement in configurable intervals (5, 10, 15, 20, 30, 60 minutes).\n- Selective announcement hours from 0 to 23 hours.\n- Customizable TTS engine, voice matched to system language, speech rate, pitch, and volume amplification up to 100% (default 50%).\n- Support for 5 independent audio streams (Media, Ring, Alarm, Accessibility, Notification).\n- Built-in chime sounds and custom audio file selection from internal storage.\n- Comprehensive Alarm Clock: Exact time scheduling (0-23h, 0-59m), configurable snooze count and interval, optional TTS announcement spoken while ringing, flexible repeat schedule (every day or specific days of week), system and custom storage ringtones with continuous looping and 10-minute auto-silence, plus configured alarms manager with batch deletion.\n- Reliable background execution via battery optimization exemption.</string>
 
-    <string name="about_guide_content">1. Auto speak time:\nEnable this checkbox to activate. The app will request [Ignore Battery Optimization] permission. Please allow it to ensure uninterrupted background execution even when screen is off.\n\n2. Announcement interval:\nChoose how frequently time should be spoken (e.g. selecting 15 minutes announces at :00, :15, :30, and :45 of every hour).\n\n3. Hours to announce:\nSelect the specific hours of the day (0 to 23) when you want announcements to be made.\n\n4. TTS engine settings:\nConfigure your preferred TTS engine, voice for system language, speech rate, pitch, volume, and playback audio stream.\n\n5. Play sound with announcement:\nEnable this option to play a chime before speaking the time. You can choose from bundled sounds or pick an audio file from your device storage.</string>
+    <string name="about_guide_content">1. Granting permissions on first launch:\nWhen opening the app for the first time, grant the necessary permissions (notifications, battery optimization exemption, and exact alarms) to ensure uninterrupted background execution and reliable alarms even when the screen is locked.\n\n2. Auto speak time:\nEnable the Auto speak time checkbox to activate periodic background time speech.\n\n3. Announcement interval:\nChoose how frequently time should be spoken (e.g. selecting 15 minutes announces at :00, :15, :30, and :45 of every hour).\n\n4. Hours to announce:\nSelect the specific hours of the day (0 to 23) when you want announcements to be made.\n\n5. TTS engine settings:\nConfigure your preferred TTS engine, voice for system language, speech rate, pitch, volume, and playback audio stream.\n\n6. Play sound with announcement:\nEnable this option to play a chime before speaking the time. You can choose from bundled sounds or pick an audio file from your device storage.\n\n7. Set alarm:\nTap Set alarm on the main screen to open the alarm manager. View and toggle your scheduled alarms, tap any alarm to edit it, or long-press to select and batch-delete. Tap the Set alarm button inside the dialog to create a new alarm: current hour and minute are auto-filled, snooze repetitions and intervals are customizable, optional TTS speech is read while ringing, repeat days and ringtones can be selected. Ringing audio loops continuously and automatically silences after 10 minutes.</string>
 
     <string name="about_license_content">Time Announcer is released under the GNU General Public License v3 (GPL v3).\n\nThis is free and open-source software. You are free to use, study, modify, and distribute this application.\n\nSOURCE CODE REDISTRIBUTION NOTICE:\nUnder the terms of the GPL v3 license, if you modify, repackage, or distribute this software (as an APK or in any other format), you MUST make the complete modified source code publicly available under the same GPL v3 license and preserve all original copyright notices.</string>
 
@@ -92,6 +92,11 @@
     <string name="btn_alarm_list">Configured alarms</string>
     <string name="alarm_dialog_set_title">Set alarm</string>
     <string name="alarm_dialog_edit_title">Edit alarm</string>
+    <string name="hint_hour">Hour</string>
+    <string name="hint_minute">Minute</string>
+    <string name="hint_snooze_count">Snooze repeats</string>
+    <string name="hint_snooze_interval">Snooze interval (minutes)</string>
+    <string name="hint_alarm_message">Announcement message (TTS, optional)</string>
     <string name="alarm_dialog_time_header">Alarm time (Hours: 00-23, Minutes: 00-59)</string>
     <string name="alarm_repeat_count_label">Snooze repeats (when alarm stopped)</string>
     <string name="alarm_snooze_interval_label">Snooze interval (minutes)</string>
@@ -119,7 +124,7 @@
     <string name="alarm_ringtone_title">Select alarm ringtone</string>
     <string name="alarm_ringtone_default">Default alarm sound</string>
     <string name="alarm_btn_delete">Delete</string>
-    <string name="alarm_list_title">Configured alarms</string>
+    <string name="alarm_list_title">Set alarm</string>
     <string name="alarm_list_empty">No alarms configured yet</string>
     <string name="alarm_alert_header">ALARM</string>
     <string name="alarm_alert_title">Alarm</string>

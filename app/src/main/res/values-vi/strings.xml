@@ -70,9 +70,9 @@
     <string name="btn_license">Giấy phép</string>
     <string name="btn_source_code">Mã nguồn</string>
 
-    <string name="about_detail_content" formatted="false">Time Announcer (Phiên bản 1.0)\n\nỨng dụng hỗ trợ bạn theo dõi thời gian liên tục mà không cần nhìn vào màn hình điện thoại.\n\nCác tính năng nổi bật:\n- Tự động đọc giờ bằng giọng nói theo khoảng thời gian tùy chọn (5, 10, 15, 20, 30, 60 phút).\n- Tùy chọn lọc các khung giờ cần thông báo từ 0 đến 23 giờ trong ngày.\n- Tùy biến công cụ TTS, lọc giọng đọc theo ngôn ngữ hệ thống, điều chỉnh tốc độ, cao độ và khuếch đại âm lượng lên tới 100% (mặc định 50%).\n- Hỗ trợ phát qua 5 kênh âm thanh độc lập (phương tiện, nhạc chuông, báo thức, trợ năng, thông báo).\n- Tích hợp phát chuông âm thanh có sẵn hoặc tệp âm thanh tự chọn từ bộ nhớ máy.\n- Chạy ngầm ổn định nhờ cơ chế xin quyền bỏ qua tối ưu hóa pin.</string>
+    <string name="about_detail_content" formatted="false">Time Announcer (Phiên bản 1.0)\n\nỨng dụng hỗ trợ bạn theo dõi thời gian liên tục mà không cần nhìn vào màn hình điện thoại.\n\nCác tính năng nổi bật:\n- Tự động đọc giờ bằng giọng nói theo khoảng thời gian tùy chọn (5, 10, 15, 20, 30, 60 phút).\n- Tùy chọn lọc các khung giờ cần thông báo từ 0 đến 23 giờ trong ngày.\n- Tùy biến công cụ TTS, lọc giọng đọc theo ngôn ngữ hệ thống, điều chỉnh tốc độ, cao độ và khuếch đại âm lượng lên tới 100% (mặc định 50%).\n- Hỗ trợ phát qua 5 kênh âm thanh độc lập (phương tiện, nhạc chuông, báo thức, trợ năng, thông báo).\n- Tích hợp phát chuông âm thanh có sẵn hoặc tệp âm thanh tự chọn từ bộ nhớ máy.\n- Tính năng Đặt báo thức toàn diện: Đặt báo thức với số giờ (0-23) và phút (0-59), tùy chỉnh số lần lặp lại và khoảng thời gian lặp lại khi tạm dừng, nội dung TTS đọc to khi chuông reo, lịch lặp lại (hằng ngày hoặc các thứ trong tuần), phát nhạc chuông hệ thống hoặc bài hát tự chọn từ bộ nhớ máy với cơ chế lặp liên tục và tự ngắt sau 10 phút, cùng trình quản lý danh sách báo thức có công tắc bật/tắt và chọn nhiều để xóa.\n- Chạy ngầm ổn định nhờ cơ chế xin quyền bỏ qua tối ưu hóa pin.</string>
 
-    <string name="about_guide_content">1. Tự động đọc giờ:\nBật hộp kiểm này để kích hoạt. Ứng dụng sẽ yêu cầu quyền [Bỏ qua tối ưu hóa pin], hãy xác nhận để ứng dụng luôn chạy ngầm kể cả khi tắt màn hình.\n\n2. Khoảng thời gian báo giờ:\nChọn tần suất đọc giờ trong mỗi giờ (ví dụ chọn 15 phút thì ứng dụng sẽ báo vào phút thứ 00, 15, 30, 45).\n\n3. Những giờ cần thông báo:\nTích chọn những giờ trong ngày mà bạn muốn nhận thông báo (từ 0 đến 23 giờ).\n\n4. Cài đặt công cụ TTS:\nChọn công cụ TTS, giọng đọc theo ngôn ngữ hệ thống, điều chỉnh tốc độ, cao độ, âm lượng và kênh âm thanh phát ra.\n\n5. Phát âm thanh khi báo giờ:\nBật tùy chọn này để phát chuông kèm theo trước khi đọc giờ. Bạn có thể chọn âm thanh tích hợp sẵn hoặc chọn tệp âm thanh từ bộ nhớ điện thoại.</string>
+    <string name="about_guide_content">1. Cấp quyền khi mở ứng dụng:\nKhi mở ứng dụng lần đầu, hãy xác nhận cấp các quyền cần thiết (thông báo, bỏ qua tối ưu hóa pin, báo thức chính xác) để ứng dụng có thể chạy ngầm và báo giờ/báo thức chuẩn xác kể cả khi tắt màn hình.\n\n2. Tự động đọc giờ:\nBật hộp kiểm Tự động đọc giờ để kích hoạt dịch vụ đọc giờ định kỳ theo lịch trình.\n\n3. Khoảng thời gian báo giờ:\nChọn tần suất đọc giờ trong mỗi giờ (ví dụ chọn 15 phút thì ứng dụng sẽ báo vào phút thứ 00, 15, 30, 45).\n\n4. Những giờ cần thông báo:\nTích chọn những giờ trong ngày mà bạn muốn nhận thông báo (từ 0 đến 23 giờ).\n\n5. Cài đặt công cụ TTS:\nChọn công cụ TTS, giọng đọc theo ngôn ngữ hệ thống, điều chỉnh tốc độ, cao độ, âm lượng và kênh âm thanh phát ra.\n\n6. Phát âm thanh khi báo giờ:\nBật tùy chọn này để phát chuông kèm theo trước khi đọc giờ. Bạn có thể chọn âm thanh tích hợp sẵn hoặc chọn tệp âm thanh từ bộ nhớ điện thoại.\n\n7. Đặt báo thức:\nNhấn nút Đặt báo thức trên màn hình chính để mở hộp thoại quản lý và đặt báo thức. Tại đây hiển thị toàn bộ các báo thức đã tạo kèm công tắc bật/tắt, bạn có thể nhấn vào một báo thức để chỉnh sửa hoặc nhấn giữ để chọn nhiều và xóa. Để tạo báo thức mới, nhấn nút Đặt báo thức trong hộp thoại: ứng dụng tự động điền sẵn giờ và phút hiện tại, cho phép tùy chỉnh số lần lặp lại, số phút phát lại khi tạm dừng, nội dung TTS đọc to khi reo chuông, các ngày lặp lại và nhạc chuông. Nhạc chuông reo sẽ tự động lặp lại liên tục và tự ngắt sau 10 phút nếu không thao tác.</string>
 
     <string name="about_license_content">Ứng dụng Time Announcer được phát hành theo Giấy phép Công cộng GNU phiên bản 3 (GPL v3).\n\nĐây là phần mềm tự do nguồn mở. Bạn có toàn quyền sử dụng, nghiên cứu, sửa đổi và chia sẻ ứng dụng này.\n\nNHẮC NHỞ VỀ VIỆC PHÂN PHỐI MÃ NGUỒN:\nTheo quy định của giấy phép GPL v3, nếu bạn chỉnh sửa, đóng gói lại hoặc phân phối ứng dụng này (dưới dạng tệp APK hay bất kỳ hình thức nào khác), bạn BẮT BUỘC phải công khai toàn bộ mã nguồn theo cùng giấy phép GPL v3 và giữ nguyên thông tin bản quyền gốc.</string>
 
@@ -92,6 +92,11 @@
     <string name="btn_alarm_list">Các báo thức đã đặt</string>
     <string name="alarm_dialog_set_title">Đặt báo thức</string>
     <string name="alarm_dialog_edit_title">Chỉnh sửa báo thức</string>
+    <string name="hint_hour">Giờ</string>
+    <string name="hint_minute">Phút</string>
+    <string name="hint_snooze_count">Số lần lặp lại</string>
+    <string name="hint_snooze_interval">Số phút phát lại khi tạm dừng</string>
+    <string name="hint_alarm_message">Nội dung khi báo thức (TTS, không bắt buộc)</string>
     <string name="alarm_dialog_time_header">Thời gian báo thức (Giờ: 00-23, Phút: 00-59)</string>
     <string name="alarm_repeat_count_label">Số lần lặp lại báo thức</string>
     <string name="alarm_snooze_interval_label">Số phút phát lại khi tạm dừng</string>
@@ -119,7 +124,7 @@
     <string name="alarm_ringtone_title">Chọn nhạc chuông báo thức</string>
     <string name="alarm_ringtone_default">Nhạc chuông mặc định của máy</string>
     <string name="alarm_btn_delete">Xóa</string>
-    <string name="alarm_list_title">Các báo thức đã đặt</string>
+    <string name="alarm_list_title">Đặt báo thức</string>
     <string name="alarm_list_empty">Chưa có báo thức nào được đặt</string>
     <string name="alarm_alert_header">BÁO THỨC</string>
     <string name="alarm_alert_title">Báo thức</string>

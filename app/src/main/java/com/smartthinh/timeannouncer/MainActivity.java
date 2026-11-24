@@ -64,8 +64,7 @@ public class MainActivity extends Activity {
     private CheckBox chkPlaySound;
     private Button btnSelectSound;
 
-    // Alarm buttons
-    private Button btnSetAlarm;
+    // Alarm button
     private Button btnAlarmList;
     private AlarmItem currentEditingAlarm;
     private Button currentAlarmRingtoneBtnRef;
@@ -164,7 +163,6 @@ public class MainActivity extends Activity {
         btnTtsSettings = findViewById(R.id.btnTtsSettings);
         chkPlaySound = findViewById(R.id.chkPlaySound);
         btnSelectSound = findViewById(R.id.btnSelectSound);
-        btnSetAlarm = findViewById(R.id.btnSetAlarm);
         btnAlarmList = findViewById(R.id.btnAlarmList);
         btnLanguage = findViewById(R.id.btnLanguage);
         btnAbout = findViewById(R.id.btnAbout);
@@ -177,6 +175,7 @@ public class MainActivity extends Activity {
         initPreviewTts(selectedEngine, null);
         updateUIState(chkAutoSpeak.isChecked());
         updateAlarmListButtonVisibility();
+        checkAndRequestInitialPermissions();
 
         // Checkbox "Auto speak time"
         chkAutoSpeak.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -215,13 +214,10 @@ public class MainActivity extends Activity {
         btnSelectSound.setOnClickListener(v -> showSoundSelectionDialog());
 
         // Button "Set alarm"
-        btnSetAlarm.setOnClickListener(v -> {
+        btnAlarmList.setOnClickListener(v -> {
             checkExactAlarmPermission();
-            showAlarmEditDialog(null);
+            showAlarmListDialog();
         });
-
-        // Button "Configured alarms"
-        btnAlarmList.setOnClickListener(v -> showAlarmListDialog());
 
         // Button "Language" (above About button)
         btnLanguage.setOnClickListener(v -> showLanguageDialog());
@@ -285,6 +281,38 @@ public class MainActivity extends Activity {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
             }
+        }
+    }
+
+    private void checkAndRequestInitialPermissions() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean requested = prefs.getBoolean("initial_permissions_requested", false);
+        if (!requested) {
+            prefs.edit().putBoolean("initial_permissions_requested", true).apply();
+            requestRequiredPermissions();
+        }
+    }
+
+    private void requestRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
+                return;
+            }
+        }
+        requestBatteryAndAlarmPermissions();
+    }
+
+    private void requestBatteryAndAlarmPermissions() {
+        requestBatteryOptimizationExemption();
+        checkExactAlarmPermission();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 101) {
+            requestBatteryAndAlarmPermissions();
         }
     }
 
@@ -1080,13 +1108,12 @@ public class MainActivity extends Activity {
     }
 
     private void updateAlarmListButtonVisibility() {
-        List<AlarmItem> list = AlarmManagerHelper.loadAlarms(this);
         if (btnAlarmList != null) {
-            btnAlarmList.setVisibility(list.isEmpty() ? View.GONE : View.VISIBLE);
+            btnAlarmList.setVisibility(View.VISIBLE);
         }
     }
 
-    private void showAlarmEditDialog(final AlarmItem alarmToEdit) {
+    private void showAlarmEditDialog(final AlarmItem alarmToEdit, final boolean returnToList) {
         final boolean isEditMode = (alarmToEdit != null);
         final AlarmItem currentAlarm = isEditMode ? alarmToEdit : new AlarmItem();
 
@@ -1171,7 +1198,16 @@ public class MainActivity extends Activity {
                 .setTitle(title)
                 .setView(dialogView)
                 .setPositiveButton(getString(R.string.btn_ok), null)
-                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .setNegativeButton(getString(R.string.btn_cancel), (d, which) -> {
+                    if (returnToList) {
+                        showAlarmListDialog();
+                    }
+                })
+                .setOnCancelListener(d -> {
+                    if (returnToList) {
+                        showAlarmListDialog();
+                    }
+                })
                 .create();
 
         dialog.setOnShowListener(d -> {
@@ -1231,6 +1267,9 @@ public class MainActivity extends Activity {
                 }
 
                 dialog.dismiss();
+                if (returnToList) {
+                    showAlarmListDialog();
+                }
             });
         });
 
@@ -1239,7 +1278,7 @@ public class MainActivity extends Activity {
 
     private void showAlarmDaysDialog(final AlarmItem alarm, final Button btnDaysRef) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_alarm_days, null);
-        CheckBox chkEveryday = dialogView.findViewById(R.id.chkAlarmEveryday);
+        Button btnEveryday = dialogView.findViewById(R.id.btnAlarmEveryday);
         CheckBox[] chkDays = {
                 dialogView.findViewById(R.id.chkDayMon),
                 dialogView.findViewById(R.id.chkDayTue),
@@ -1256,34 +1295,27 @@ public class MainActivity extends Activity {
         for (int i = 0; i < 7; i++) {
             chkDays[i].setChecked(tempDays[i]);
         }
-        chkEveryday.setChecked(alarm.isEveryDay());
 
-        final boolean[] isProgrammatic = {false};
-
-        chkEveryday.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isProgrammatic[0]) return;
-            isProgrammatic[0] = true;
-            for (int i = 0; i < 7; i++) {
-                chkDays[i].setChecked(isChecked);
-                tempDays[i] = isChecked;
-            }
-            isProgrammatic[0] = false;
-        });
-
-        CompoundButton.OnCheckedChangeListener dayListener = (buttonView, isChecked) -> {
-            if (isProgrammatic[0]) return;
+        btnEveryday.setOnClickListener(v -> {
             boolean allChecked = true;
             for (int i = 0; i < 7; i++) {
-                tempDays[i] = chkDays[i].isChecked();
-                if (!tempDays[i]) allChecked = false;
+                if (!chkDays[i].isChecked()) {
+                    allChecked = false;
+                    break;
+                }
             }
-            isProgrammatic[0] = true;
-            chkEveryday.setChecked(allChecked);
-            isProgrammatic[0] = false;
-        };
+            boolean newState = !allChecked;
+            for (int i = 0; i < 7; i++) {
+                chkDays[i].setChecked(newState);
+                tempDays[i] = newState;
+            }
+        });
 
-        for (CheckBox cb : chkDays) {
-            cb.setOnCheckedChangeListener(dayListener);
+        for (int i = 0; i < 7; i++) {
+            final int dayIdx = i;
+            chkDays[i].setOnCheckedChangeListener((buttonView, isChecked) -> {
+                tempDays[dayIdx] = isChecked;
+            });
         }
 
         new AlertDialog.Builder(this)
@@ -1483,7 +1515,7 @@ public class MainActivity extends Activity {
                         // Click to edit alarm
                         btnAlarm.setOnClickListener(v -> {
                             dialog.dismiss();
-                            showAlarmEditDialog(alarm);
+                            showAlarmEditDialog(alarm, true);
                         });
 
                         // Long click to switch into multi-select mode
@@ -1555,7 +1587,7 @@ public class MainActivity extends Activity {
 
         btnAddAlarm.setOnClickListener(v -> {
             dialog.dismiss();
-            showAlarmEditDialog(null);
+            showAlarmEditDialog(null, true);
         });
 
         btnClose.setOnClickListener(v -> dialog.dismiss());
