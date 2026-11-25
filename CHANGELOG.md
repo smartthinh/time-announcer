@@ -4,6 +4,20 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 
 ---
 
+## [Unreleased]
+
+### Sửa lỗi & Độ tin cậy (Bug Fixes & Reliability):
+- **Tự động đọc giờ sau khi khởi động lại máy:** Khi bạn bật tính năng tự động đọc giờ, ứng dụng sẽ luôn ghi nhớ và tiếp tục đọc giờ bình thường sau khi tắt nguồn hay khởi động lại điện thoại. Bạn không cần phải mở ứng dụng để tắt rồi bật lại hộp kiểm.
+- **Báo thức luôn báo đúng giờ sau khi bật nguồn:** Toàn bộ báo thức đã bật sẽ tự động sẵn sàng và đổ chuông chính xác đúng giờ hẹn sau khi điện thoại khởi động lại, kể cả khi máy đang ở màn hình khóa chưa mở mật khẩu.
+- **Đọc giờ và báo thức chuẩn xác khi tắt màn hình:** Tích hợp cơ chế đánh thức chuẩn hệ thống giúp ứng dụng luôn đọc giờ và báo thức đúng từng phút kể cả khi điện thoại tắt màn hình lâu hoặc đang ở chế độ ngủ sâu (tiết kiệm pin).
+
+### Cải tiến giao diện & Trải nghiệm (UI & Usability Improvements):
+- **Nút "Cài đặt công cụ TTS" luôn luôn hiển thị:** Bạn có thể mở cài đặt công cụ đọc để chọn giọng nói, chỉnh tốc độ, cao độ, âm lượng bất cứ lúc nào trên màn hình chính mà không cần phải bật chức năng tự động đọc giờ trước.
+- **Mở rộng tốc độ đọc giọng nói lên tối đa 5.0x:** Tốc độ đọc nay có thể tùy chỉnh nhanh gấp 5 lần tốc độ chuẩn (5.0x) với các bước kéo mượt mà, đáp ứng nhu cầu nghe nhanh của người dùng.
+- **Giao diện thanh trượt gọn gàng và dễ nhìn hơn:** Loại bỏ các chuỗi số và phần trăm dài dòng trên các nhãn "Tốc độ đọc", "Cao độ", "Âm lượng giọng nói", giúp giao diện thanh thoát, trực quan và dễ tiếp cận hơn cho người dùng trình đọc màn hình.
+
+---
+
 ## [Version 1.1] - 2026-11-25
 
 A major update adding a comprehensive Alarm Clock feature, seamless permission handling on first launch, automatic in-app updates, and a cleaner user interface.
@@ -31,14 +45,6 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
 - **Automatic Alarm Recovery After Reboot:**
   - All enabled alarms are automatically rescheduled whenever you restart your device.
 
-- **Persistent Auto Time Announcement Across Reboots:**
-  - The auto speak time service now automatically restores and resumes announcing the time after restarting or turning on the phone, without requiring manual toggle of the checkbox.
-
-- **Direct Boot & Deep Sleep Resilience:**
-  - Integrated `directBootAware` and device-protected storage so both alarms and time announcements function accurately even before the first user unlock after a reboot.
-  - Added exact `AlarmManager` system wakeups to guarantee time announcements trigger reliably when the screen is off and in deep Doze mode.
-  - Added listeners for network time updates and timezone changes (`TIME_SET`, `TIMEZONE_CHANGED`).
-
 - **In-App GitHub Auto-Update:**
   - **Automatic Check on Startup:** The app now automatically checks for updates quietly in the background whenever you open it. If a newer version is found, an update window will appear to let you know.
   - **Manual Check:** You can also manually check for updates at any time by tapping the **Check for updates** button on the main screen.
@@ -46,7 +52,6 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
   - **One-Tap Download & Install:** Download updates directly with a smooth 0% to 100% progress bar, and automatically open the installer as soon as the download finishes.
 
 ### UI & Usability Improvements:
-- **Expanded TTS Speech Rate & Clean Labels:** Expanded the Text-to-Speech speed slider up to 5.0x in 0.1x steps. Cleaned up slider labels by removing unnecessary numbers and percentage text from the labels (keeping only clean labels "Tốc độ đọc", "Cao độ", "Âm lượng giọng nói"), providing a much cleaner and accessible interface.
 - **Streamlined Main Screen:** Simplified the main screen by combining alarm creation and management into a single, clean **"Set alarm"** button, and added the dedicated **"Check for updates"** button.
 - **Cleaner About Dialog:** Removed hardcoded version numbers from the About description in both English and Vietnamese for a cleaner, unified presentation.
 - **Inline Input Hints:** Removed redundant label text lines above input fields and embedded labels directly inside the fields as hints (Hour, Minute, Snooze repeats, etc.), creating a much cleaner interface.

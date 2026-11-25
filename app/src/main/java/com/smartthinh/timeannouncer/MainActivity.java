@@ -280,8 +280,8 @@ public class MainActivity extends Activity {
         int mainVisibility = isEnabled ? View.VISIBLE : View.GONE;
         btnInterval.setVisibility(mainVisibility);
         btnHours.setVisibility(mainVisibility);
-        btnTtsSettings.setVisibility(mainVisibility);
         chkPlaySound.setVisibility(mainVisibility);
+        btnTtsSettings.setVisibility(View.VISIBLE);
 
         btnInterval.setText(getString(R.string.btn_interval_prefix, selectedInterval));
         btnHours.setText(getString(R.string.btn_hours_prefix, countSelectedHours()));

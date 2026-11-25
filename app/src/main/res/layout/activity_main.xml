@@ -38,15 +38,6 @@
             android:layout_marginBottom="12dp"
             android:visibility="gone" />
 
-        <Button
-            android:id="@+id/btnTtsSettings"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="@string/btn_tts_settings"
-            android:textSize="15sp"
-            android:layout_marginBottom="20dp"
-            android:visibility="gone" />
-
         <CheckBox
             android:id="@+id/chkPlaySound"
             android:layout_width="wrap_content"
@@ -63,8 +54,16 @@
             android:layout_height="50dp"
             android:text="@string/dialog_sound_title"
             android:textSize="15sp"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="20dp"
             android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnTtsSettings"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_tts_settings"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp" />
 
         <Button
             android:id="@+id/btnAlarmList"
