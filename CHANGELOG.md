@@ -31,6 +31,14 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
 - **Automatic Alarm Recovery After Reboot:**
   - All enabled alarms are automatically rescheduled whenever you restart your device.
 
+- **Persistent Auto Time Announcement Across Reboots:**
+  - The auto speak time service now automatically restores and resumes announcing the time after restarting or turning on the phone, without requiring manual toggle of the checkbox.
+
+- **Direct Boot & Deep Sleep Resilience:**
+  - Integrated `directBootAware` and device-protected storage so both alarms and time announcements function accurately even before the first user unlock after a reboot.
+  - Added exact `AlarmManager` system wakeups to guarantee time announcements trigger reliably when the screen is off and in deep Doze mode.
+  - Added listeners for network time updates and timezone changes (`TIME_SET`, `TIMEZONE_CHANGED`).
+
 - **In-App GitHub Auto-Update:**
   - **Automatic Check on Startup:** The app now automatically checks for updates quietly in the background whenever you open it. If a newer version is found, an update window will appear to let you know.
   - **Manual Check:** You can also manually check for updates at any time by tapping the **Check for updates** button on the main screen.

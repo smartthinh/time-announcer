@@ -53,30 +53,47 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:excludeFromRecents="true"
+            android:directBootAware="true"
             android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
 
         <service
             android:name=".AlarmService"
             android:foregroundServiceType="mediaPlayback"
+            android:directBootAware="true"
             android:exported="false" />
 
         <receiver
             android:name=".AlarmReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".TimeAnnouncementReceiver"
+            android:directBootAware="true"
             android:exported="false" />
 
         <receiver
             android:name=".BootReceiver"
+            android:directBootAware="true"
+            android:enabled="true"
             android:exported="true">
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.REBOOT" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
 
         <service
             android:name=".TimeAnnouncementService"
             android:foregroundServiceType="mediaPlayback"
+            android:directBootAware="true"
+            android:stopWithTask="false"
             android:exported="false" />
 
         <provider

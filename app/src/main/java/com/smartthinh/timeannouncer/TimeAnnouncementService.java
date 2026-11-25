@@ -1,12 +1,15 @@
 package com.smartthinh.timeannouncer;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
 import android.content.res.AssetFileDescriptor;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
@@ -19,7 +22,9 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
+import android.util.Log;
 
 import java.util.Calendar;
 import java.util.Locale;
@@ -27,7 +32,10 @@ import java.util.Set;
 
 public class TimeAnnouncementService extends Service implements TextToSpeech.OnInitListener {
 
+    private static final String TAG = "TimeAnnouncerService";
     private static final String CHANNEL_ID = "TimeAnnouncerChannel";
+    public static final String ACTION_ANNOUNCE_NOW = "com.smartthinh.timeannouncer.ACTION_ANNOUNCE_NOW";
+
     private TextToSpeech tts;
     private boolean isTtsReady = false;
 
@@ -55,9 +63,133 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     private int lastAnnouncedHour = -1;
     private PowerManager.WakeLock wakeLock;
 
+    public static void startAnnouncerService(Context context) {
+        Intent intent = new Intent(context, TimeAnnouncementService.class);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start TimeAnnouncementService", e);
+        }
+    }
+
+    public static void stopAnnouncerService(Context context) {
+        Intent intent = new Intent(context, TimeAnnouncementService.class);
+        try {
+            context.stopService(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to stop TimeAnnouncementService", e);
+        }
+    }
+
+    public static void announceNow(Context context) {
+        Intent intent = new Intent(context, TimeAnnouncementService.class);
+        intent.setAction(ACTION_ANNOUNCE_NOW);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to send announceNow to TimeAnnouncementService", e);
+        }
+    }
+
+    public static long getNextAnnouncementTimeMillis(int interval, boolean[] hours) {
+        if (interval <= 0) interval = 60;
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        int currentMinute = cal.get(Calendar.MINUTE);
+        int remainder = currentMinute % interval;
+        int minutesToAdd = interval - remainder;
+        cal.add(Calendar.MINUTE, minutesToAdd);
+
+        for (int i = 0; i < 48 * 60 / interval; i++) {
+            int h = cal.get(Calendar.HOUR_OF_DAY);
+            if (hours == null || hours.length < 24 || hours[h]) {
+                return cal.getTimeInMillis();
+            }
+            cal.add(Calendar.MINUTE, interval);
+        }
+        return cal.getTimeInMillis();
+    }
+
+    public static void scheduleNextAnnouncement(Context context) {
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(context);
+        boolean autoSpeak = prefs.getBoolean("auto_speak", false);
+        if (!autoSpeak) {
+            cancelAnnouncement(context);
+            return;
+        }
+
+        int interval = prefs.getInt("interval", 60);
+        boolean[] hours = new boolean[24];
+        for (int i = 0; i < 24; i++) {
+            hours[i] = prefs.getBoolean("hour_" + i, true);
+        }
+
+        long nextTime = getNextAnnouncementTimeMillis(interval, hours);
+
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+
+        Intent intent = new Intent(context, TimeAnnouncementReceiver.class);
+        intent.setAction(TimeAnnouncementReceiver.ACTION_TRIGGER_ANNOUNCEMENT);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        PendingIntent pi = PendingIntent.getBroadcast(context, 7777, intent, flags);
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Intent showIntent = new Intent(context, MainActivity.class);
+                PendingIntent showPi = PendingIntent.getActivity(context, 7777, showIntent, flags);
+                am.setAlarmClock(new AlarmManager.AlarmClockInfo(nextTime, showPi), pi);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextTime, pi);
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, nextTime, pi);
+            }
+            Log.d(TAG, "Scheduled next time announcement via AlarmManager at " + nextTime);
+        } catch (SecurityException se) {
+            Log.e(TAG, "SecurityException scheduling exact announcement alarm", se);
+            try {
+                am.set(AlarmManager.RTC_WAKEUP, nextTime, pi);
+            } catch (Exception e) {
+                Log.e(TAG, "Fallback announcement alarm failed", e);
+            }
+        }
+    }
+
+    public static void cancelAnnouncement(Context context) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+
+        Intent intent = new Intent(context, TimeAnnouncementReceiver.class);
+        intent.setAction(TimeAnnouncementReceiver.ACTION_TRIGGER_ANNOUNCEMENT);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        PendingIntent pi = PendingIntent.getBroadcast(context, 7777, intent, flags);
+        am.cancel(pi);
+        Log.d(TAG, "Cancelled time announcement alarm in AlarmManager");
+    }
+
     @Override
     protected void attachBaseContext(Context newBase) {
-        SharedPreferences prefs = newBase.getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(newBase);
         String lang = prefs.getString("app_language", "en");
         super.attachBaseContext(MainActivity.updateLocaleContext(newBase, lang));
     }
@@ -66,19 +198,29 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     public void onCreate() {
         super.onCreate();
 
+        // 1. Immediately create channel and enter foreground (Android 8+ requires startForeground quickly)
+        createNotificationChannel();
+        Notification notification = buildForegroundNotification();
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(1, notification);
+        }
+
+        // 2. Load settings and init TTS
         loadSettings();
         initTts();
 
+        // 3. Keep partial wake lock for reliability
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
             wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimeAnnouncer::WakeLock");
-            wakeLock.acquire(24 * 60 * 60 * 1000L);
+            try {
+                wakeLock.acquire(24 * 60 * 60 * 1000L);
+            } catch (Exception ignored) {}
         }
 
-        createNotificationChannel();
-        Notification notification = buildForegroundNotification();
-        startForeground(1, notification);
-
+        // 4. Start 1-second check loop for foreground precision
         handler = new Handler(Looper.getMainLooper());
         checkTimeRunnable = new Runnable() {
             @Override
@@ -88,17 +230,34 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
             }
         };
         handler.post(checkTimeRunnable);
+
+        // 5. Ensure AlarmManager exact trigger is scheduled for deep sleep/doze mode
+        scheduleNextAnnouncement(this);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         loadSettings();
         applyTtsSettings();
+
+        if (intent != null && ACTION_ANNOUNCE_NOW.equals(intent.getAction())) {
+            Calendar calendar = Calendar.getInstance();
+            if (calendar.get(Calendar.SECOND) >= 55) {
+                calendar.add(Calendar.SECOND, 10);
+            }
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int minute = calendar.get(Calendar.MINUTE);
+            if (hours[hour]) {
+                performAnnouncement(hour, minute);
+            }
+            scheduleNextAnnouncement(this);
+        }
+
         return START_STICKY;
     }
 
     private void loadSettings() {
-        SharedPreferences prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(this);
         interval = prefs.getInt("interval", 60);
         for (int i = 0; i < 24; i++) {
             hours[i] = prefs.getBoolean("hour_" + i, true);
@@ -125,15 +284,21 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
 
     private void initTts() {
         if (tts != null) {
-            tts.stop();
-            tts.shutdown();
+            try {
+                tts.stop();
+                tts.shutdown();
+            } catch (Exception ignored) {}
         }
         isTtsReady = false;
 
-        if (enginePackage != null && !enginePackage.isEmpty()) {
-            tts = new TextToSpeech(this, this, enginePackage);
-        } else {
-            tts = new TextToSpeech(this, this);
+        try {
+            if (enginePackage != null && !enginePackage.isEmpty()) {
+                tts = new TextToSpeech(this, this, enginePackage);
+            } else {
+                tts = new TextToSpeech(this, this);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to instantiate TextToSpeech", e);
         }
     }
 
@@ -144,49 +309,68 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     private void applyTtsSettings() {
         if (!isTtsReady || tts == null) return;
 
-        tts.setSpeechRate(speechRate);
-        tts.setPitch(speechPitch);
+        try {
+            tts.setSpeechRate(speechRate);
+            tts.setPitch(speechPitch);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            if (!voiceName.isEmpty()) {
-                Set<Voice> voices = tts.getVoices();
-                if (voices != null) {
-                    for (Voice v : voices) {
-                        if (v.getName().equals(voiceName)) {
-                            tts.setVoice(v);
-                            break;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if (!voiceName.isEmpty()) {
+                    Set<Voice> voices = tts.getVoices();
+                    if (voices != null) {
+                        for (Voice v : voices) {
+                            if (v.getName().equals(voiceName)) {
+                                tts.setVoice(v);
+                                break;
+                            }
                         }
                     }
+                } else {
+                    tts.setLanguage(getTargetLocale());
                 }
-            } else {
-                tts.setLanguage(getTargetLocale());
+
+                int streamType = MainActivity.getStreamTypeFromIndex(audioStreamIndex);
+                AudioAttributes.Builder aab = new AudioAttributes.Builder();
+                switch (streamType) {
+                    case AudioManager.STREAM_RING:
+                        aab.setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                           .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
+                        break;
+                    case AudioManager.STREAM_ALARM:
+                        aab.setUsage(AudioAttributes.USAGE_ALARM)
+                           .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
+                        break;
+                    case AudioManager.STREAM_NOTIFICATION:
+                        aab.setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                           .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
+                        break;
+                    default:
+                        if (Build.VERSION.SDK_INT >= 26 && streamType == AudioManager.STREAM_ACCESSIBILITY) {
+                            aab.setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY);
+                        } else {
+                            aab.setUsage(AudioAttributes.USAGE_MEDIA);
+                        }
+                        aab.setContentType(AudioAttributes.CONTENT_TYPE_SPEECH);
+                        break;
+                }
+                tts.setAudioAttributes(aab.build());
             }
 
-            int streamType = MainActivity.getStreamTypeFromIndex(audioStreamIndex);
-            AudioAttributes.Builder aab = new AudioAttributes.Builder();
-            switch (streamType) {
-                case AudioManager.STREAM_RING:
-                    aab.setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                       .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
-                    break;
-                case AudioManager.STREAM_ALARM:
-                    aab.setUsage(AudioAttributes.USAGE_ALARM)
-                       .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
-                    break;
-                case AudioManager.STREAM_NOTIFICATION:
-                    aab.setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                       .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
-                    break;
-                default:
-                    if (Build.VERSION.SDK_INT >= 26 && streamType == AudioManager.STREAM_ACCESSIBILITY) {
-                        aab.setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY);
-                    } else {
-                        aab.setUsage(AudioAttributes.USAGE_MEDIA);
-                    }
-                    aab.setContentType(AudioAttributes.CONTENT_TYPE_SPEECH);
-                    break;
-            }
-            tts.setAudioAttributes(aab.build());
+            tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override
+                public void onStart(String utteranceId) {}
+
+                @Override
+                public void onDone(String utteranceId) {
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                }
+
+                @Override
+                public void onError(String utteranceId) {
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to apply TTS settings", e);
         }
     }
 
@@ -196,18 +380,21 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
         int minute = calendar.get(Calendar.MINUTE);
         int second = calendar.get(Calendar.SECOND);
 
-        if (second == 0 && (minute != lastAnnouncedMinute || hour != lastAnnouncedHour)) {
-            if (hours[hour]) {
-                if (minute % interval == 0) {
-                    lastAnnouncedMinute = minute;
-                    lastAnnouncedHour = hour;
-                    performAnnouncement(hour, minute);
-                }
+        if (second <= 3 && (minute != lastAnnouncedMinute || hour != lastAnnouncedHour)) {
+            if (hours[hour] && (minute % interval == 0)) {
+                performAnnouncement(hour, minute);
+                scheduleNextAnnouncement(this);
             }
         }
     }
 
     private void performAnnouncement(int hour, int minute) {
+        if (hour == lastAnnouncedHour && minute == lastAnnouncedMinute) {
+            return;
+        }
+        lastAnnouncedHour = hour;
+        lastAnnouncedMinute = minute;
+
         if (!isPlaySoundEnabled || soundPath == null || soundPath.isEmpty()) {
             speakTimeTts(hour, minute);
             return;
@@ -268,47 +455,56 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     }
 
     private void speakTimeTts(int hour, int minute) {
-        if (!isTtsReady || tts == null) return;
+        if (!isTtsReady || tts == null) {
+            TimeAnnouncementReceiver.releaseWakeLock();
+            return;
+        }
 
         applyTtsSettings();
 
         String speech;
-        if ("vi".equalsIgnoreCase(appLanguage)) {
-            if (minute == 0) {
-                speech = getString(R.string.speech_exact_hour, hour);
-            } else {
-                speech = getString(R.string.speech_hour_minute, hour, minute);
-            }
+        if (minute == 0) {
+            speech = getString(R.string.speech_exact_hour, hour);
         } else {
-            if (minute == 0) {
-                speech = getString(R.string.speech_exact_hour, hour);
-            } else {
-                speech = getString(R.string.speech_hour_minute, hour, minute);
-            }
+            speech = getString(R.string.speech_hour_minute, hour, minute);
         }
 
         int streamType = MainActivity.getStreamTypeFromIndex(audioStreamIndex);
         float vol = Math.max(0.0f, Math.min(1.0f, speechVolume / 100.0f));
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Bundle params = new Bundle();
-            params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, streamType);
-            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, vol);
-            tts.speak(speech, TextToSpeech.QUEUE_FLUSH, params, "TimeAnnouncement");
-        } else {
-            java.util.HashMap<String, String> params = new java.util.HashMap<>();
-            params.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(streamType));
-            params.put(TextToSpeech.Engine.KEY_PARAM_VOLUME, String.valueOf(vol));
-            tts.speak(speech, TextToSpeech.QUEUE_FLUSH, params);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Bundle params = new Bundle();
+                params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, streamType);
+                params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, vol);
+                tts.speak(speech, TextToSpeech.QUEUE_FLUSH, params, "TimeAnnouncement");
+            } else {
+                java.util.HashMap<String, String> params = new java.util.HashMap<>();
+                params.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(streamType));
+                params.put(TextToSpeech.Engine.KEY_PARAM_VOLUME, String.valueOf(vol));
+                tts.speak(speech, TextToSpeech.QUEUE_FLUSH, params);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "TTS speak failed", e);
+            TimeAnnouncementReceiver.releaseWakeLock();
+        }
+
+        // Safety timeout to guarantee wake lock release if callback is missed
+        if (handler != null) {
+            handler.postDelayed(TimeAnnouncementReceiver::releaseWakeLock, 15000);
         }
     }
 
     @Override
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
-            tts.setLanguage(getTargetLocale());
-            isTtsReady = true;
-            applyTtsSettings();
+            try {
+                tts.setLanguage(getTargetLocale());
+                isTtsReady = true;
+                applyTtsSettings();
+            } catch (Exception e) {
+                Log.e(TAG, "Error initializing TTS language", e);
+            }
         }
     }
 
@@ -328,6 +524,14 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     }
 
     private Notification buildForegroundNotification() {
+        Intent notifyIntent = new Intent(this, MainActivity.class);
+        notifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            piFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notifyIntent, piFlags);
+
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder = new Notification.Builder(this, CHANNEL_ID);
@@ -339,8 +543,18 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
                 .setContentTitle(getString(R.string.notification_title))
                 .setContentText(getString(R.string.notification_text))
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .build();
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(this);
+        if (prefs.getBoolean("auto_speak", false)) {
+            scheduleNextAnnouncement(this);
+        }
     }
 
     @Override
@@ -351,12 +565,17 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
             handler.removeCallbacks(checkTimeRunnable);
         }
         if (tts != null) {
-            tts.stop();
-            tts.shutdown();
+            try {
+                tts.stop();
+                tts.shutdown();
+            } catch (Exception ignored) {}
         }
         if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
+            try {
+                wakeLock.release();
+            } catch (Exception ignored) {}
         }
+        TimeAnnouncementReceiver.releaseWakeLock();
     }
 
     @Override

@@ -24,7 +24,7 @@ public class AlarmManagerHelper {
 
     public static List<AlarmItem> loadAlarms(Context context) {
         List<AlarmItem> list = new ArrayList<>();
-        SharedPreferences prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(context);
         String jsonStr = prefs.getString(PREF_KEY_ALARMS, null);
         if (jsonStr != null && !jsonStr.isEmpty()) {
             try {
@@ -45,7 +45,7 @@ public class AlarmManagerHelper {
         for (AlarmItem item : alarms) {
             arr.put(item.toJson());
         }
-        SharedPreferences prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(context);
         prefs.edit().putString(PREF_KEY_ALARMS, arr.toString()).apply();
     }
 

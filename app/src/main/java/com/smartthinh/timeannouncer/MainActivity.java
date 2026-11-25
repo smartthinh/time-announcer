@@ -133,9 +133,20 @@ public class MainActivity extends Activity {
         }
     }
 
+    public static SharedPreferences getSafeSharedPreferences(Context context) {
+        Context storageContext = context;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            storageContext = context.createDeviceProtectedStorageContext();
+            try {
+                storageContext.moveSharedPreferencesFrom(context, PREFS_NAME);
+            } catch (Exception ignored) {}
+        }
+        return storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
     @Override
     protected void attachBaseContext(Context newBase) {
-        SharedPreferences prefs = newBase.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getSafeSharedPreferences(newBase);
         String lang = prefs.getString("app_language", null);
         if (lang == null) {
             // First time opening the app: check system language
@@ -161,7 +172,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         // Apply saved locale to resources
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getSafeSharedPreferences(this);
         currentLanguage = prefs.getString("app_language", "en");
         Locale locale = new Locale(currentLanguage);
         Locale.setDefault(locale);
@@ -195,6 +206,11 @@ public class MainActivity extends Activity {
         updateUIState(chkAutoSpeak.isChecked());
         updateAlarmListButtonVisibility();
         checkAndRequestInitialPermissions();
+
+        // Ensure service and alarm schedules are active if enabled
+        if (chkAutoSpeak.isChecked()) {
+            startAnnouncerService();
+        }
 
         // Checkbox "Auto speak time"
         chkAutoSpeak.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -255,6 +271,9 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         updateAlarmListButtonVisibility();
+        if (chkAutoSpeak != null && chkAutoSpeak.isChecked()) {
+            startAnnouncerService();
+        }
     }
 
     private void updateUIState(boolean isEnabled) {
@@ -310,7 +329,7 @@ public class MainActivity extends Activity {
     }
 
     private void checkAndRequestInitialPermissions() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getSafeSharedPreferences(this);
         boolean requested = prefs.getBoolean("initial_permissions_requested", false);
         if (!requested) {
             prefs.edit().putBoolean("initial_permissions_requested", true).apply();
@@ -985,7 +1004,7 @@ public class MainActivity extends Activity {
                     dialog.dismiss();
                     if (!newLang.equals(currentLanguage)) {
                         currentLanguage = newLang;
-                        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                        SharedPreferences.Editor editor = getSafeSharedPreferences(MainActivity.this).edit();
                         editor.putString("app_language", currentLanguage);
                         editor.apply();
 
@@ -1054,17 +1073,13 @@ public class MainActivity extends Activity {
     }
 
     private void startAnnouncerService() {
-        Intent intent = new Intent(this, TimeAnnouncementService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
-        }
+        TimeAnnouncementService.startAnnouncerService(this);
+        TimeAnnouncementService.scheduleNextAnnouncement(this);
     }
 
     private void stopAnnouncerService() {
-        Intent intent = new Intent(this, TimeAnnouncementService.class);
-        stopService(intent);
+        TimeAnnouncementService.stopAnnouncerService(this);
+        TimeAnnouncementService.cancelAnnouncement(this);
     }
 
     private void restartServiceIfRunning() {
@@ -1074,7 +1089,7 @@ public class MainActivity extends Activity {
     }
 
     private void savePreferences() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getSafeSharedPreferences(this);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean("auto_speak", chkAutoSpeak.isChecked());
         editor.putInt("interval", selectedInterval);
@@ -1099,7 +1114,7 @@ public class MainActivity extends Activity {
     }
 
     private void loadPreferences() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getSafeSharedPreferences(this);
         chkAutoSpeak.setChecked(prefs.getBoolean("auto_speak", false));
         selectedInterval = prefs.getInt("interval", 60);
         for (int i = 0; i < 24; i++) {

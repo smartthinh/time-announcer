@@ -31,7 +31,7 @@ public class AlarmAlertActivity extends Activity {
 
     @Override
     protected void attachBaseContext(Context newBase) {
-        SharedPreferences prefs = newBase.getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(newBase);
         String lang = prefs.getString("app_language", "en");
         super.attachBaseContext(MainActivity.updateLocaleContext(newBase, lang));
     }

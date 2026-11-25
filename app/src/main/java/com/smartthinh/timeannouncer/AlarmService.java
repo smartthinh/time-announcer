@@ -335,7 +335,7 @@ public class AlarmService extends Service {
     private void initTtsAndSpeak() {
         if (alarm == null || alarm.getMessage().isEmpty()) return;
 
-        SharedPreferences prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(this);
         String engine = prefs.getString("tts_engine", "");
 
         ttsRepeatRunnable = () -> {
