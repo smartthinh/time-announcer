@@ -8,7 +8,7 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 
 A major update adding a comprehensive Alarm Clock feature, seamless permission handling on first launch, automatic in-app updates, and a cleaner user interface.
 
-### 🌟 New Features:
+### New Features:
 - **Full-Featured Alarm Clock:**
   - **Accurate Alarm Scheduling:** Easily set hours and minutes. When creating a new alarm, the current device time is automatically filled in for you.
   - **Input Validation:** Automatically prevents typing invalid times (limits hours to 0–23 and minutes to 0–59, instantly clearing invalid entries).
@@ -37,7 +37,7 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
   - **Clear Update Details:** When an update is available, you can read what is new line-by-line right inside the app before choosing to update.
   - **One-Tap Download & Install:** Download updates directly with a smooth 0% to 100% progress bar, and automatically open the installer as soon as the download finishes.
 
-### 🎨 UI & Usability Improvements:
+### UI & Usability Improvements:
 - **Streamlined Main Screen:** Simplified the main screen by combining alarm creation and management into a single, clean **"Set alarm"** button, and added the dedicated **"Check for updates"** button.
 - **Cleaner About Dialog:** Removed hardcoded version numbers from the About description in both English and Vietnamese for a cleaner, unified presentation.
 - **Inline Input Hints:** Removed redundant label text lines above input fields and embedded labels directly inside the fields as hints (Hour, Minute, Snooze repeats, etc.), creating a much cleaner interface.
@@ -49,7 +49,7 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
 
 Initial release of the Time Announcer application.
 
-### 🚀 Key Features:
+### Key Features:
 - **Automatic Voice Time Announcements:** Periodically announces the current time using Text-to-Speech without needing to look at or unlock your phone.
 - **Customizable Intervals:** Choose announcement frequency every 5, 10, 15, 20, 30, or 60 minutes (top of the hour).
 - **24-Hour Checklist:** Select which hours of the day (from 0 to 23) should trigger announcements, keeping your night hours quiet.
