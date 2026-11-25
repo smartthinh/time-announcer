@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
@@ -236,7 +237,7 @@ public class AlarmService extends Service {
                 channel.setDescription(getString(R.string.alarm_channel_desc));
                 channel.setBypassDnd(true);
                 channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-                channel.enableVibration(true);
+                channel.enableVibration(false);
 
                 AudioAttributes audioAttributes = new AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -249,13 +250,27 @@ public class AlarmService extends Service {
     }
 
     private void startVibration() {
+        if (alarm != null && !alarm.isVibrate()) {
+            return;
+        }
         try {
             vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             if (vibrator != null && vibrator.hasVibrator()) {
                 long[] pattern = {0, 600, 400, 600, 800};
-                vibrator.vibrate(pattern, 0);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    VibrationEffect effect = VibrationEffect.createWaveform(pattern, 0);
+                    AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build();
+                    vibrator.vibrate(effect, audioAttributes);
+                } else {
+                    vibrator.vibrate(pattern, 0);
+                }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting vibration", e);
+        }
     }
 
     private void stopVibration() {
@@ -267,6 +282,9 @@ public class AlarmService extends Service {
     }
 
     private void startRingtone() {
+        if (alarm != null && !alarm.isSoundEnabled()) {
+            return;
+        }
         try {
             mediaPlayer = new MediaPlayer();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {

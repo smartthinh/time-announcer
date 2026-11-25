@@ -93,13 +93,33 @@
             android:textSize="14sp"
             android:layout_marginBottom="12dp" />
 
-        <!-- Ringtone button -->
+        <!-- Sound CheckBox -->
+        <CheckBox
+            android:id="@+id/chkAlarmSound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_alarm_sound"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Ringtone button (shown only if chkAlarmSound is checked) -->
         <Button
             android:id="@+id/btnAlarmRingtone"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:text="@string/alarm_btn_ringtone"
             android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Vibrate CheckBox -->
+        <CheckBox
+            android:id="@+id/chkAlarmVibrate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_alarm_vibrate"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:layout_marginBottom="16dp" />
 
     </LinearLayout>

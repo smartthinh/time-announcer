@@ -23,6 +23,8 @@ public class AlarmItem implements Serializable {
     private String ringtoneUri; // Empty string or URI string
     private String ringtoneTitle; // Title of ringtone
     private boolean isEnabled; // Enabled switch state
+    private boolean isVibrate; // Vibration enabled state
+    private boolean isSoundEnabled; // Sound enabled state
 
     public AlarmItem() {
         this.id = System.currentTimeMillis();
@@ -36,6 +38,8 @@ public class AlarmItem implements Serializable {
         this.ringtoneUri = "";
         this.ringtoneTitle = "";
         this.isEnabled = true;
+        this.isVibrate = true;
+        this.isSoundEnabled = true;
 
         // Default: select current day of week
         int calDow = now.get(Calendar.DAY_OF_WEEK);
@@ -133,6 +137,22 @@ public class AlarmItem implements Serializable {
         isEnabled = enabled;
     }
 
+    public boolean isVibrate() {
+        return isVibrate;
+    }
+
+    public void setVibrate(boolean vibrate) {
+        isVibrate = vibrate;
+    }
+
+    public boolean isSoundEnabled() {
+        return isSoundEnabled;
+    }
+
+    public void setSoundEnabled(boolean soundEnabled) {
+        isSoundEnabled = soundEnabled;
+    }
+
     public boolean isEveryDay() {
         for (boolean b : daysOfWeek) {
             if (!b) return false;
@@ -228,6 +248,8 @@ public class AlarmItem implements Serializable {
             obj.put("ringtoneUri", ringtoneUri);
             obj.put("ringtoneTitle", ringtoneTitle);
             obj.put("isEnabled", isEnabled);
+            obj.put("isVibrate", isVibrate);
+            obj.put("isSoundEnabled", isSoundEnabled);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -255,6 +277,8 @@ public class AlarmItem implements Serializable {
             item.setRingtoneUri(obj.optString("ringtoneUri", ""));
             item.setRingtoneTitle(obj.optString("ringtoneTitle", ""));
             item.setEnabled(obj.optBoolean("isEnabled", true));
+            item.setVibrate(obj.optBoolean("isVibrate", true));
+            item.setSoundEnabled(obj.optBoolean("isSoundEnabled", true));
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -1176,7 +1176,9 @@ public class MainActivity extends Activity {
         final EditText edtSnoozeInterval = dialogView.findViewById(R.id.edtSnoozeInterval);
         final EditText edtMessage = dialogView.findViewById(R.id.edtAlarmMessage);
         final Button btnDays = dialogView.findViewById(R.id.btnAlarmDays);
+        final CheckBox chkSound = dialogView.findViewById(R.id.chkAlarmSound);
         final Button btnRingtone = dialogView.findViewById(R.id.btnAlarmRingtone);
+        final CheckBox chkVibrate = dialogView.findViewById(R.id.chkAlarmVibrate);
 
         // Auto-fill current time or existing time
         if (isEditMode) {
@@ -1236,6 +1238,14 @@ public class MainActivity extends Activity {
 
         btnDays.setText(getString(R.string.alarm_btn_days, currentAlarm.getFormattedDays(this)));
         btnDays.setOnClickListener(v -> showAlarmDaysDialog(currentAlarm, btnDays));
+
+        chkSound.setChecked(currentAlarm.isSoundEnabled());
+        btnRingtone.setVisibility(currentAlarm.isSoundEnabled() ? View.VISIBLE : View.GONE);
+        chkSound.setOnCheckedChangeListener((btn, isChecked) -> {
+            btnRingtone.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        chkVibrate.setChecked(currentAlarm.isVibrate());
 
         String rName = currentAlarm.getRingtoneTitle();
         if (rName == null || rName.isEmpty()) {
@@ -1307,6 +1317,8 @@ public class MainActivity extends Activity {
                 currentAlarm.setRemainingSnoozeCount(snoozeCount);
                 currentAlarm.setSnoozeMinutes(snoozeInterval);
                 currentAlarm.setMessage(message);
+                currentAlarm.setSoundEnabled(chkSound.isChecked());
+                currentAlarm.setVibrate(chkVibrate.isChecked());
                 currentAlarm.setEnabled(true);
 
                 AlarmManagerHelper.saveOrUpdateAlarm(MainActivity.this, currentAlarm);

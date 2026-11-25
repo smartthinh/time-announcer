@@ -28,6 +28,7 @@ The application runs reliably in the background as a foreground service and requ
   - Flexible day recurrence dialog with an Every day button and 7 day-of-week checkboxes (defaults to today).
   - Ringtone picker featuring all default system alarm ringtones with instant playback preview, plus picking any music file from device internal storage.
   - Continuous ringtone looping so melodies never cut off mid-alarm.
+  - Dedicated sound and vibration toggles with continuous, looping alarm vibration.
   - Automatic silence protection after 10 minutes to preserve battery and prevent speaker fatigue.
   - Ringing alarm dialog with Snooze ("Dừng tạm thời") and Dismiss ("Tắt báo thức") controls.
   - Configured alarms dialog displaying alarms as interactive buttons with individual ON/OFF toggle switches, tap-to-edit, and long-press multi-select mode for batch deletion.
@@ -64,10 +65,10 @@ Tap the Announcement interval button to open the interval selection dialog. Choo
 Tap the Hours to announce button to open the 24-hour checklist (0:00 to 23:00). Check only the hours during which you wish to receive announcements. For example, you can select daytime hours from 7:00 to 22:00 and leave night hours unchecked to ensure quiet sleep. A Select all button is available for quick configuration.
 
 ### 5. Configuring TTS and Voice
-Tap the TTS engine settings button to customize speech delivery:
+Tap the TTS engine settings button (always accessible on the main screen) to customize speech delivery:
 - Select TTS engine: View all installed speech synthesis engines and switch between them.
 - Select voice: View and select from voices that match your system language.
-- Speech rate: Adjust reading speed from 0.5x to 2.5x.
+- Speech rate: Adjust reading speed flexibly from 0.5x up to 5.0x.
 - Pitch: Adjust voice tone from deep to high.
 - Speech volume: Set volume between 0% and 100% (default is 50% for amplification headroom).
 - Select audio stream: Choose which audio stream handles speech playback (Media, Ring, Alarm, Accessibility, or Notification).
@@ -89,8 +90,9 @@ Tap the Set alarm button on the main screen to open the alarm manager dialog:
   - Set the number of snooze repetitions and the snooze interval in minutes.
   - Optionally enter text in the announcement field for Text-to-Speech to read aloud while the alarm is ringing.
   - Tap Repeat days to open the recurrence dialog. Use the Every day button or individual day checkboxes (defaults to the current day of the week).
-  - Tap Ringtone to select from default device alarm sounds or pick any custom audio file from your device internal storage.
-  - When the alarm rings, the screen wakes up and displays the alarm alert dialog with Snooze and Dismiss buttons. The ringtone loops continuously and automatically silences after 10 minutes if unattended.
+  - Use the Sound checkbox to enable or mute the ringtone, and tap Ringtone to select from default device alarm sounds or pick any custom audio file from your device internal storage.
+  - Use the Vibrate checkbox to enable or disable continuous rhythmic alarm vibration throughout ringing.
+  - When the alarm rings, the screen wakes up and displays the alarm alert dialog with Snooze and Dismiss buttons. The ringtone and vibration loop continuously and automatically silence after 10 minutes if unattended.
 
 ### 8. Checking for Updates
 The app automatically checks for new updates in the background each time you launch it. You can also tap the Check for updates button on the main screen to check manually at any time:

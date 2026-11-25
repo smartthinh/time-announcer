@@ -6,15 +6,17 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 
 ## [Unreleased]
 
-### Sửa lỗi & Độ tin cậy (Bug Fixes & Reliability):
-- **Tự động đọc giờ sau khi khởi động lại máy:** Khi bạn bật tính năng tự động đọc giờ, ứng dụng sẽ luôn ghi nhớ và tiếp tục đọc giờ bình thường sau khi tắt nguồn hay khởi động lại điện thoại. Bạn không cần phải mở ứng dụng để tắt rồi bật lại hộp kiểm.
-- **Báo thức luôn báo đúng giờ sau khi bật nguồn:** Toàn bộ báo thức đã bật sẽ tự động sẵn sàng và đổ chuông chính xác đúng giờ hẹn sau khi điện thoại khởi động lại, kể cả khi máy đang ở màn hình khóa chưa mở mật khẩu.
-- **Đọc giờ và báo thức chuẩn xác khi tắt màn hình:** Tích hợp cơ chế đánh thức chuẩn hệ thống giúp ứng dụng luôn đọc giờ và báo thức đúng từng phút kể cả khi điện thoại tắt màn hình lâu hoặc đang ở chế độ ngủ sâu (tiết kiệm pin).
+### Added
+- **Alarm Sound & Vibration Toggles:** Added independent "Sound" and "Vibrate" checkboxes in the alarm dialog. Alarms can now ring with audio, vibrate in a continuous rhythmic pattern, or both. The ringtone picker automatically hides when sound is disabled.
+- **Always-Visible TTS Settings Button:** The "TTS engine settings" button is now permanently visible on the main screen, allowing Text-to-Speech configuration at any time.
 
-### Cải tiến giao diện & Trải nghiệm (UI & Usability Improvements):
-- **Nút "Cài đặt công cụ TTS" luôn luôn hiển thị:** Bạn có thể mở cài đặt công cụ đọc để chọn giọng nói, chỉnh tốc độ, cao độ, âm lượng bất cứ lúc nào trên màn hình chính mà không cần phải bật chức năng tự động đọc giờ trước.
-- **Mở rộng tốc độ đọc giọng nói lên tối đa 5.0x:** Tốc độ đọc nay có thể tùy chỉnh nhanh gấp 5 lần tốc độ chuẩn (5.0x) với các bước kéo mượt mà, đáp ứng nhu cầu nghe nhanh của người dùng.
-- **Giao diện thanh trượt gọn gàng và dễ nhìn hơn:** Loại bỏ các chuỗi số và phần trăm dài dòng trên các nhãn "Tốc độ đọc", "Cao độ", "Âm lượng giọng nói", giúp giao diện thanh thoát, trực quan và dễ tiếp cận hơn cho người dùng trình đọc màn hình.
+### Changed
+- **Higher Speech Rate Support:** Speech rate can now be adjusted up to 5.0x with smooth slider increments.
+- **Clean Slider Labels:** Streamlined the speech rate, pitch, and speech volume slider labels without redundant numbers or percentage tags for improved clarity and screen reader compatibility.
+
+### Fixed
+- **Time Announcements After Reboot:** Automatic time announcements now reliably resume after powering on or restarting the device, without needing to toggle the setting off and on.
+- **Alarm Reliability Across Reboots and Screen-Off:** All enabled alarms automatically restore on boot (including Direct Boot before first unlock) and trigger accurately on time during deep sleep and screen-off.
 
 ---
 
