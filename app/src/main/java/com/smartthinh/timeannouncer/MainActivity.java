@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -330,6 +331,7 @@ public class MainActivity extends Activity {
     private void requestBatteryAndAlarmPermissions() {
         requestBatteryOptimizationExemption();
         checkExactAlarmPermission();
+        checkFullScreenIntentPermission();
     }
 
     @Override
@@ -1125,6 +1127,20 @@ public class MainActivity extends Activity {
             if (am != null && !am.canScheduleExactAlarms()) {
                 try {
                     Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    startActivity(intent);
+                } catch (Exception ignored) {}
+            }
+        }
+        checkFullScreenIntentPermission();
+    }
+
+    private void checkFullScreenIntentPermission() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null && !nm.canUseFullScreenIntent()) {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
                     startActivity(intent);
                 } catch (Exception ignored) {}
             }
