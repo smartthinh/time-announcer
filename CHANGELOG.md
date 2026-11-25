@@ -46,6 +46,7 @@ A major update adding a comprehensive Alarm Clock feature, seamless permission h
   - **One-Tap Download & Install:** Download updates directly with a smooth 0% to 100% progress bar, and automatically open the installer as soon as the download finishes.
 
 ### UI & Usability Improvements:
+- **Expanded TTS Speech Rate & Clean Labels:** Expanded the Text-to-Speech speed slider up to 5.0x in 0.1x steps. Cleaned up slider labels by removing unnecessary numbers and percentage text from the labels (keeping only clean labels "Tốc độ đọc", "Cao độ", "Âm lượng giọng nói"), providing a much cleaner and accessible interface.
 - **Streamlined Main Screen:** Simplified the main screen by combining alarm creation and management into a single, clean **"Set alarm"** button, and added the dedicated **"Check for updates"** button.
 - **Cleaner About Dialog:** Removed hardcoded version numbers from the About description in both English and Vietnamese for a cleaner, unified presentation.
 - **Inline Input Hints:** Removed redundant label text lines above input fields and embedded labels directly inside the fields as hints (Hour, Minute, Snooze repeats, etc.), creating a much cleaner interface.

@@ -39,9 +39,9 @@
     <string name="tts_voice_auto_label">Tự động (Mặc định ngôn ngữ hệ thống)</string>
     <string name="btn_select_engine">Chọn công cụ TTS</string>
     <string name="btn_select_voice">Chọn giọng nói</string>
-    <string name="label_speed_prefix">Tốc độ đọc: %.1fx</string>
-    <string name="label_pitch_prefix">Cao độ: %.1fx</string>
-    <string name="label_volume_prefix">Âm lượng giọng nói: %d%%</string>
+    <string name="label_speed">Tốc độ đọc</string>
+    <string name="label_pitch">Cao độ</string>
+    <string name="label_volume">Âm lượng giọng nói</string>
     <string name="btn_select_stream_prefix">Kênh âm thanh: %s</string>
     <string name="btn_test_voice">Nghe thử giọng nói</string>
 

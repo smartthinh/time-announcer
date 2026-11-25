@@ -32,7 +32,7 @@
             android:id="@+id/tvSpeedLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Speech rate: 1.0x"
+            android:text="@string/label_speed"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -40,7 +40,7 @@
             android:id="@+id/sbSpeed"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="20"
+            android:max="45"
             android:progress="5"
             android:layout_marginTop="6dp"
             android:layout_marginBottom="16dp" />
@@ -50,7 +50,7 @@
             android:id="@+id/tvPitchLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pitch: 1.0x"
+            android:text="@string/label_pitch"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -63,12 +63,12 @@
             android:layout_marginTop="6dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- Âm lượng giọng nói (mặc định 50%) -->
+        <!-- Âm lượng giọng nói -->
         <TextView
             android:id="@+id/tvVolumeLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Speech volume: 50%"
+            android:text="@string/label_volume"
             android:textSize="14sp"
             android:textStyle="bold" />
 

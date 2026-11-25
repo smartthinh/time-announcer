@@ -670,15 +670,14 @@ public class MainActivity extends Activity {
         btnSelectEngine.setOnClickListener(v -> showEngineSelectionDialog(btnSelectEngine, btnSelectVoice));
         btnSelectVoice.setOnClickListener(v -> showVoiceSelectionDialog(btnSelectVoice));
 
-        int speedProgress = (int) Math.round((speechRate - 0.5f) * 10);
-        sbSpeed.setMax(20);
-        sbSpeed.setProgress(Math.max(0, Math.min(20, speedProgress)));
-        tvSpeedLabel.setText(getString(R.string.label_speed_prefix, speechRate));
+        int speedProgress = Math.max(0, Math.min(45, (int) Math.round((speechRate - 0.5f) * 10f)));
+        sbSpeed.setMax(45);
+        sbSpeed.setProgress(speedProgress);
+        tvSpeedLabel.setText(getString(R.string.label_speed));
         sbSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                speechRate = 0.5f + (progress * 0.1f);
-                tvSpeedLabel.setText(getString(R.string.label_speed_prefix, speechRate));
+                speechRate = Math.round((0.5f + (progress * 0.1f)) * 10f) / 10f;
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
@@ -687,12 +686,11 @@ public class MainActivity extends Activity {
         int pitchProgress = (int) Math.round((speechPitch - 0.5f) * 10);
         sbPitch.setMax(20);
         sbPitch.setProgress(Math.max(0, Math.min(20, pitchProgress)));
-        tvPitchLabel.setText(getString(R.string.label_pitch_prefix, speechPitch));
+        tvPitchLabel.setText(getString(R.string.label_pitch));
         sbPitch.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 speechPitch = 0.5f + (progress * 0.1f);
-                tvPitchLabel.setText(getString(R.string.label_pitch_prefix, speechPitch));
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
@@ -700,12 +698,11 @@ public class MainActivity extends Activity {
 
         sbVolume.setMax(100);
         sbVolume.setProgress(speechVolume);
-        tvVolumeLabel.setText(getString(R.string.label_volume_prefix, speechVolume));
+        tvVolumeLabel.setText(getString(R.string.label_volume));
         sbVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 speechVolume = progress;
-                tvVolumeLabel.setText(getString(R.string.label_volume_prefix, speechVolume));
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}

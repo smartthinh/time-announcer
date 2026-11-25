@@ -39,9 +39,9 @@
     <string name="tts_voice_auto_label">Automatic (System default language)</string>
     <string name="btn_select_engine">Select TTS engine</string>
     <string name="btn_select_voice">Select voice</string>
-    <string name="label_speed_prefix">Speech rate: %.1fx</string>
-    <string name="label_pitch_prefix">Pitch: %.1fx</string>
-    <string name="label_volume_prefix">Speech volume: %d%%</string>
+    <string name="label_speed">Speech rate</string>
+    <string name="label_pitch">Pitch</string>
+    <string name="label_volume">Speech volume</string>
     <string name="btn_select_stream_prefix">Audio stream: %s</string>
     <string name="btn_test_voice">Test voice</string>
 

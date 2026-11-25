@@ -17,7 +17,7 @@ The application runs reliably in the background as a foreground service and requ
 - Selective Announcement Hours: Choose specifically which hours of the day (from 0 to 23) should trigger announcements. Unselected hours remain quiet.
 - Complete TTS Engine Selection: Detects and lists all Text-to-Speech engines installed on your device (such as Google Speech Services, Samsung TTS, Vocalizer, RHVoice, etc.).
 - System Language Voice Filtering: When selecting a voice, the app automatically filters and displays only voices that match your device current system language, eliminating irrelevant language entries.
-- Speech Parameter Controls: Fine-tune speech rate, pitch, and voice volume. Voice volume defaults to 50% to provide headroom for users who need amplified loudness up to 100%.
+- Speech Parameter Controls: Fine-tune speech rate (supporting up to 5.0x), pitch, and voice volume with clean, accessible slider labels. Voice volume defaults to 50% to provide headroom for users who need amplified loudness up to 100%.
 - Five Audio Streams: Route speech and chime playback through five separate system audio channels: Media volume stream, Ring volume stream, Alarm volume stream, Accessibility volume stream, or Notification volume stream.
 - Chime Audio Playback: Optionally play a chime before reading the time. Includes 18 bundled chime sounds and supports picking any custom audio file from your device internal storage.
 - Comprehensive Alarm Clock:
