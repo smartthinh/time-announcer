@@ -7,10 +7,12 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 ## [Unreleased]
 
 ### Added
+- **Vibration with Time Announcements:** Added a dedicated "Vibrate with announcement" checkbox on the main screen (visible when auto-speak is enabled). When checked, the device vibrates each time an announcement triggers; unchecked by default.
 - **Alarm Sound & Vibration Toggles:** Added independent "Sound" and "Vibrate" checkboxes in the alarm dialog. Alarms can now ring with audio, vibrate in a continuous rhythmic pattern, or both. The ringtone picker automatically hides when sound is disabled.
 - **Always-Visible TTS Settings Button:** The "TTS engine settings" button is now permanently visible on the main screen, allowing Text-to-Speech configuration at any time.
 
 ### Changed
+- **Removed Auto-Speak Toggle Popups:** Removed the notification toast messages when turning "Auto speak time" on or off for a quieter, smoother user experience.
 - **Higher Speech Rate Support:** Speech rate can now be adjusted up to 5.0x with smooth slider increments.
 - **Clean Slider Labels:** Streamlined the speech rate, pitch, and speech volume slider labels without redundant numbers or percentage tags for improved clarity and screen reader compatibility.
 

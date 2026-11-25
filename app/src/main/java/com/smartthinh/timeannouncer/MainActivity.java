@@ -73,9 +73,11 @@ public class MainActivity extends Activity {
     private Button btnHours;
     private Button btnTtsSettings;
 
-    // Checkbox and button for announcement sound
+    // Checkbox and button for announcement sound and vibration
     private CheckBox chkPlaySound;
     private Button btnSelectSound;
+    private CheckBox chkAnnounceVibrate;
+    private boolean isAnnounceVibrate = false;
 
     // Alarm button
     private Button btnAlarmList;
@@ -192,6 +194,7 @@ public class MainActivity extends Activity {
         btnTtsSettings = findViewById(R.id.btnTtsSettings);
         chkPlaySound = findViewById(R.id.chkPlaySound);
         btnSelectSound = findViewById(R.id.btnSelectSound);
+        chkAnnounceVibrate = findViewById(R.id.chkAnnounceVibrate);
         btnAlarmList = findViewById(R.id.btnAlarmList);
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
         btnLanguage = findViewById(R.id.btnLanguage);
@@ -220,10 +223,8 @@ public class MainActivity extends Activity {
                 requestNotificationPermission();
                 requestBatteryOptimizationExemption();
                 startAnnouncerService();
-                Toast.makeText(this, getString(R.string.toast_auto_speak_enabled), Toast.LENGTH_SHORT).show();
             } else {
                 stopAnnouncerService();
-                Toast.makeText(this, getString(R.string.toast_auto_speak_disabled), Toast.LENGTH_SHORT).show();
             }
             savePreferences();
         });
@@ -247,6 +248,13 @@ public class MainActivity extends Activity {
 
         // Button "Select sound"
         btnSelectSound.setOnClickListener(v -> showSoundSelectionDialog());
+
+        // Checkbox "Vibrate with announcement"
+        chkAnnounceVibrate.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            isAnnounceVibrate = isChecked;
+            savePreferences();
+            restartServiceIfRunning();
+        });
 
         // Button "Set alarm"
         btnAlarmList.setOnClickListener(v -> {
@@ -281,6 +289,7 @@ public class MainActivity extends Activity {
         btnInterval.setVisibility(mainVisibility);
         btnHours.setVisibility(mainVisibility);
         chkPlaySound.setVisibility(mainVisibility);
+        chkAnnounceVibrate.setVisibility(mainVisibility);
         btnTtsSettings.setVisibility(View.VISIBLE);
 
         btnInterval.setText(getString(R.string.btn_interval_prefix, selectedInterval));
@@ -1105,6 +1114,8 @@ public class MainActivity extends Activity {
         editor.putString("sound_path", selectedSoundPath);
         editor.putString("sound_name", selectedSoundName);
 
+        editor.putBoolean("announce_vibrate", isAnnounceVibrate);
+
         editor.putString("app_language", currentLanguage);
 
         editor.apply();
@@ -1129,6 +1140,9 @@ public class MainActivity extends Activity {
         isCustomSound = prefs.getBoolean("sound_is_custom", false);
         selectedSoundPath = prefs.getString("sound_path", "sounds/bell.wav");
         selectedSoundName = prefs.getString("sound_name", "bell");
+
+        isAnnounceVibrate = prefs.getBoolean("announce_vibrate", false);
+        chkAnnounceVibrate.setChecked(isAnnounceVibrate);
 
         currentLanguage = prefs.getString("app_language", "en");
     }

@@ -21,6 +21,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
@@ -48,10 +50,11 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     private int speechVolume = 50;
     private int audioStreamIndex = 0;
 
-    // Announcement sound configuration
+    // Announcement sound and vibration configuration
     private boolean isPlaySoundEnabled = false;
     private boolean isCustomSound = false;
     private String soundPath = "";
+    private boolean isVibrateEnabled = false;
 
     // App language ("en" or "vi")
     private String appLanguage = "en";
@@ -278,6 +281,7 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
         isPlaySoundEnabled = prefs.getBoolean("play_sound", false);
         isCustomSound = prefs.getBoolean("sound_is_custom", false);
         soundPath = prefs.getString("sound_path", "sounds/bell.wav");
+        isVibrateEnabled = prefs.getBoolean("announce_vibrate", false);
 
         appLanguage = prefs.getString("app_language", "en");
     }
@@ -395,6 +399,10 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
         lastAnnouncedHour = hour;
         lastAnnouncedMinute = minute;
 
+        if (isVibrateEnabled) {
+            vibrateAnnouncement();
+        }
+
         if (!isPlaySoundEnabled || soundPath == null || soundPath.isEmpty()) {
             speakTimeTts(hour, minute);
             return;
@@ -451,6 +459,33 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
                 currentPlayer.release();
             } catch (Exception ignored) {}
             currentPlayer = null;
+        }
+    }
+
+    private void vibrateAnnouncement() {
+        try {
+            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null && vibrator.hasVibrator()) {
+                long[] pattern = {0, 500, 250, 500};
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    int usage = AudioAttributes.USAGE_NOTIFICATION;
+                    if (audioStreamIndex == 2) {
+                        usage = AudioAttributes.USAGE_ALARM;
+                    } else if (audioStreamIndex == 1) {
+                        usage = AudioAttributes.USAGE_NOTIFICATION_RINGTONE;
+                    }
+                    AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                            .setUsage(usage)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build();
+                    VibrationEffect effect = VibrationEffect.createWaveform(pattern, -1);
+                    vibrator.vibrate(effect, audioAttributes);
+                } else {
+                    vibrator.vibrate(pattern, -1);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error vibrating for time announcement", e);
         }
     }
 
@@ -561,6 +596,12 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     public void onDestroy() {
         super.onDestroy();
         stopCurrentPlayer();
+        try {
+            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null) {
+                vibrator.cancel();
+            }
+        } catch (Exception ignored) {}
         if (handler != null && checkTimeRunnable != null) {
             handler.removeCallbacks(checkTimeRunnable);
         }

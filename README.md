@@ -20,6 +20,7 @@ The application runs reliably in the background as a foreground service and requ
 - Speech Parameter Controls: Fine-tune speech rate (supporting up to 5.0x), pitch, and voice volume with clean, accessible slider labels. Voice volume defaults to 50% to provide headroom for users who need amplified loudness up to 100%.
 - Five Audio Streams: Route speech and chime playback through five separate system audio channels: Media volume stream, Ring volume stream, Alarm volume stream, Accessibility volume stream, or Notification volume stream.
 - Chime Audio Playback: Optionally play a chime before reading the time. Includes 18 bundled chime sounds and supports picking any custom audio file from your device internal storage.
+- Vibrate with Announcement: Optionally vibrate whenever the time announcement triggers, keeping you informed even in noisy environments or discreet situations.
 - Comprehensive Alarm Clock:
   - Exact time scheduling with hours (0-23) and minutes (0-59) with auto-fill of current time and strict input validation.
   - Inline input hints for hour, minute, snooze repeats, snooze interval, and TTS message.
