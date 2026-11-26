@@ -7,6 +7,7 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 ## [Unreleased]
 
 ### Added
+- **Custom Voice Pack Support:** Import and use personalized voice recordings via .zip packages containing `hour`, `hourly`, `minutes`, and a descriptor JSON file. Easily select, preview, or delete voice packs, and enjoy seamless, natural gapless time speech without pauses between hours and minutes.
 - **Vibration with Time Announcements:** Added a dedicated "Vibrate with announcement" checkbox on the main screen (visible when auto-speak is enabled). When checked, the device vibrates each time an announcement triggers; unchecked by default.
 - **Alarm Sound & Vibration Toggles:** Added independent "Sound" and "Vibrate" checkboxes in the alarm dialog. Alarms can now ring with audio, vibrate in a continuous rhythmic pattern, or both. The ringtone picker automatically hides when sound is disabled.
 - **Always-Visible TTS Settings Button:** The "TTS engine settings" button is now permanently visible on the main screen, allowing Text-to-Speech configuration at any time.

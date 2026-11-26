@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -27,6 +28,7 @@ import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
+import android.util.Log;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -64,9 +66,11 @@ import java.util.Set;
 
 public class MainActivity extends Activity {
 
+    private static final String TAG = "MainActivity";
     public static final String PREFS_NAME = "TimeAnnouncerPrefs";
     private static final int REQUEST_CODE_PICK_AUDIO = 202;
     private static final int REQUEST_CODE_PICK_ALARM_AUDIO = 203;
+    private static final int REQUEST_CODE_PICK_ZIP = 204;
 
     private CheckBox chkAutoSpeak;
     private Button btnInterval;
@@ -78,6 +82,15 @@ public class MainActivity extends Activity {
     private Button btnSelectSound;
     private CheckBox chkAnnounceVibrate;
     private boolean isAnnounceVibrate = false;
+
+    // Custom voice announcement
+    private CheckBox chkCustomVoice;
+    private Button btnCustomVoice;
+    private boolean isCustomVoiceEnabled = false;
+    private String activeCustomVoiceId = "";
+    private AlertDialog currentCustomVoiceDialog;
+    private MediaPlayer previewVoicePlayer1;
+    private MediaPlayer previewVoicePlayer2;
 
     // Alarm button
     private Button btnAlarmList;
@@ -195,6 +208,8 @@ public class MainActivity extends Activity {
         chkPlaySound = findViewById(R.id.chkPlaySound);
         btnSelectSound = findViewById(R.id.btnSelectSound);
         chkAnnounceVibrate = findViewById(R.id.chkAnnounceVibrate);
+        chkCustomVoice = findViewById(R.id.chkCustomVoice);
+        btnCustomVoice = findViewById(R.id.btnCustomVoice);
         btnAlarmList = findViewById(R.id.btnAlarmList);
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
         btnLanguage = findViewById(R.id.btnLanguage);
@@ -256,6 +271,17 @@ public class MainActivity extends Activity {
             restartServiceIfRunning();
         });
 
+        // Checkbox "Use custom voice announcement"
+        chkCustomVoice.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            isCustomVoiceEnabled = isChecked;
+            btnCustomVoice.setVisibility((chkAutoSpeak.isChecked() && isChecked) ? View.VISIBLE : View.GONE);
+            savePreferences();
+            restartServiceIfRunning();
+        });
+
+        // Button "Custom voice announcement"
+        btnCustomVoice.setOnClickListener(v -> showCustomVoiceDialog());
+
         // Button "Set alarm"
         btnAlarmList.setOnClickListener(v -> {
             checkExactAlarmPermission();
@@ -290,6 +316,7 @@ public class MainActivity extends Activity {
         btnHours.setVisibility(mainVisibility);
         chkPlaySound.setVisibility(mainVisibility);
         chkAnnounceVibrate.setVisibility(mainVisibility);
+        chkCustomVoice.setVisibility(mainVisibility);
         btnTtsSettings.setVisibility(View.VISIBLE);
 
         btnInterval.setText(getString(R.string.btn_interval_prefix, selectedInterval));
@@ -301,6 +328,12 @@ public class MainActivity extends Activity {
             btnSelectSound.setVisibility(View.GONE);
         }
         btnSelectSound.setText(getString(R.string.btn_select_sound_prefix, selectedSoundName));
+
+        if (isEnabled && isCustomVoiceEnabled) {
+            btnCustomVoice.setVisibility(View.VISIBLE);
+        } else {
+            btnCustomVoice.setVisibility(View.GONE);
+        }
     }
 
     private int countSelectedHours() {
@@ -548,6 +581,17 @@ public class MainActivity extends Activity {
                     currentAlarmRingtoneBtnRef.setText(getString(R.string.alarm_btn_ringtone, fileName));
                 }
             }
+        } else if (requestCode == REQUEST_CODE_PICK_ZIP && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                try {
+                    final int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                } catch (Exception ignored) {}
+
+                String fileName = getFileNameFromUri(uri);
+                importVoicePackZip(uri, fileName);
+            }
         }
     }
 
@@ -606,6 +650,225 @@ public class MainActivity extends Activity {
                 previewPlayer.release();
             } catch (Exception ignored) {}
             previewPlayer = null;
+        }
+    }
+
+    private void showCustomVoiceDialog() {
+        stopVoicePreview();
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_custom_voice, null);
+        Button btnImport = dialogView.findViewById(R.id.btnImportVoicePack);
+        btnImport.setOnClickListener(v -> pickZipFile());
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.dialog_custom_voice_title))
+                .setView(dialogView)
+                .setPositiveButton(getString(R.string.btn_close), (dialog, which) -> stopVoicePreview());
+
+        currentCustomVoiceDialog = builder.create();
+        currentCustomVoiceDialog.setOnDismissListener(dialog -> stopVoicePreview());
+        currentCustomVoiceDialog.show();
+
+        populateVoicePackList(currentCustomVoiceDialog);
+    }
+
+    private void pickZipFile() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        String[] mimeTypes = {"application/zip", "application/x-zip-compressed", "application/octet-stream"};
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+        try {
+            startActivityForResult(intent, REQUEST_CODE_PICK_ZIP);
+        } catch (Exception e) {
+            Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+            fallback.setType("*/*");
+            startActivityForResult(fallback, REQUEST_CODE_PICK_ZIP);
+        }
+    }
+
+    private void importVoicePackZip(Uri uri, String fileName) {
+        Toast.makeText(this, "Đang xử lý gói giọng nói...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                CustomVoiceManager.VoicePack pack = CustomVoiceManager.importZip(MainActivity.this, uri, fileName);
+                runOnUiThread(() -> {
+                    activeCustomVoiceId = pack.id;
+                    savePreferences();
+                    restartServiceIfRunning();
+                    Toast.makeText(MainActivity.this, getString(R.string.voice_pack_imported, pack.name), Toast.LENGTH_SHORT).show();
+                    if (currentCustomVoiceDialog != null && currentCustomVoiceDialog.isShowing()) {
+                        populateVoicePackList(currentCustomVoiceDialog);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error importing voice pack zip", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, getString(R.string.voice_pack_invalid), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
+    }
+
+    private void populateVoicePackList(Dialog dialog) {
+        if (dialog == null) return;
+        LinearLayout llVoicePacks = dialog.findViewById(R.id.llVoicePacks);
+        TextView tvEmpty = dialog.findViewById(R.id.tvEmptyPacks);
+        if (llVoicePacks == null) return;
+
+        llVoicePacks.removeAllViews();
+        List<CustomVoiceManager.VoicePack> packs = CustomVoiceManager.getInstalledPacks(this);
+
+        if (packs.isEmpty()) {
+            if (tvEmpty != null) {
+                llVoicePacks.addView(tvEmpty);
+                tvEmpty.setVisibility(View.VISIBLE);
+            }
+            return;
+        }
+
+        boolean foundActive = false;
+        for (CustomVoiceManager.VoicePack p : packs) {
+            if (p.id.equals(activeCustomVoiceId)) {
+                foundActive = true;
+                break;
+            }
+        }
+        if (!foundActive && !packs.isEmpty()) {
+            activeCustomVoiceId = packs.get(0).id;
+            savePreferences();
+            restartServiceIfRunning();
+        }
+
+        for (CustomVoiceManager.VoicePack pack : packs) {
+            View itemView = LayoutInflater.from(this).inflate(R.layout.dialog_custom_voice_item, llVoicePacks, false);
+            CheckBox chkItem = itemView.findViewById(R.id.chkVoicePack);
+            Button btnPreview = itemView.findViewById(R.id.btnPreviewVoice);
+            Button btnDelete = itemView.findViewById(R.id.btnDeleteVoice);
+
+            chkItem.setText(pack.name);
+            chkItem.setChecked(pack.id.equals(activeCustomVoiceId));
+
+            chkItem.setOnClickListener(v -> {
+                activeCustomVoiceId = pack.id;
+                savePreferences();
+                restartServiceIfRunning();
+                Toast.makeText(this, getString(R.string.voice_pack_selected, pack.name), Toast.LENGTH_SHORT).show();
+                populateVoicePackList(dialog);
+            });
+
+            btnPreview.setOnClickListener(v -> playCustomVoicePreview(pack));
+
+            btnDelete.setOnClickListener(v -> {
+                new AlertDialog.Builder(this)
+                        .setMessage(getString(R.string.dialog_confirm_delete_voice))
+                        .setPositiveButton(getString(R.string.btn_ok), (d, w) -> {
+                            stopVoicePreview();
+                            CustomVoiceManager.deletePack(this, pack.id);
+                            if (pack.id.equals(activeCustomVoiceId)) {
+                                activeCustomVoiceId = "";
+                                savePreferences();
+                                restartServiceIfRunning();
+                            }
+                            populateVoicePackList(dialog);
+                        })
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
+                        .show();
+            });
+
+            llVoicePacks.addView(itemView);
+        }
+    }
+
+    private void playCustomVoicePreview(CustomVoiceManager.VoicePack pack) {
+        stopVoicePreview();
+        if (pack == null || pack.directory == null) return;
+
+        Calendar now = Calendar.getInstance();
+        int hour = now.get(Calendar.HOUR_OF_DAY);
+        int minute = now.get(Calendar.MINUTE);
+
+        float vol = Math.max(0.0f, Math.min(1.0f, speechVolume / 100.0f));
+
+        try {
+            if (minute == 0) {
+                File file = CustomVoiceManager.getHourlyAudioFile(pack.directory, hour);
+                if (file == null || !file.exists()) {
+                    Toast.makeText(this, "Không tìm thấy tệp âm thanh giờ đúng", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                previewVoicePlayer1 = new MediaPlayer();
+                applyAudioAttributesToPlayer(previewVoicePlayer1, selectedStreamIndex);
+                previewVoicePlayer1.setDataSource(file.getAbsolutePath());
+                previewVoicePlayer1.setVolume(vol, vol);
+                previewVoicePlayer1.setOnCompletionListener(mp -> stopVoicePreview());
+                previewVoicePlayer1.prepare();
+                previewVoicePlayer1.start();
+            } else {
+                File hourFile = CustomVoiceManager.getHourAudioFile(pack.directory, hour);
+                File minFile = CustomVoiceManager.getMinuteAudioFile(pack.directory, minute);
+                if (hourFile == null || !hourFile.exists() || minFile == null || !minFile.exists()) {
+                    Toast.makeText(this, "Không tìm thấy tệp âm thanh giờ hoặc phút", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                previewVoicePlayer1 = new MediaPlayer();
+                previewVoicePlayer2 = new MediaPlayer();
+
+                applyAudioAttributesToPlayer(previewVoicePlayer1, selectedStreamIndex);
+                applyAudioAttributesToPlayer(previewVoicePlayer2, selectedStreamIndex);
+
+                previewVoicePlayer1.setDataSource(hourFile.getAbsolutePath());
+                previewVoicePlayer2.setDataSource(minFile.getAbsolutePath());
+
+                previewVoicePlayer1.setVolume(vol, vol);
+                previewVoicePlayer2.setVolume(vol, vol);
+
+                previewVoicePlayer1.prepare();
+                previewVoicePlayer2.prepare();
+
+                try {
+                    previewVoicePlayer1.setNextMediaPlayer(previewVoicePlayer2);
+                    previewVoicePlayer1.setOnCompletionListener(mp -> {
+                        try { mp.release(); } catch (Exception ignored) {}
+                        previewVoicePlayer1 = null;
+                    });
+                } catch (Exception e) {
+                    previewVoicePlayer1.setOnCompletionListener(mp -> {
+                        try { mp.release(); } catch (Exception ignored) {}
+                        previewVoicePlayer1 = null;
+                        if (previewVoicePlayer2 != null) {
+                            try { previewVoicePlayer2.start(); } catch (Exception ignored) {}
+                        }
+                    });
+                }
+
+                previewVoicePlayer2.setOnCompletionListener(mp -> stopVoicePreview());
+                previewVoicePlayer1.start();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error playing custom voice preview", e);
+            stopVoicePreview();
+        }
+    }
+
+    private void stopVoicePreview() {
+        if (previewVoicePlayer1 != null) {
+            try {
+                if (previewVoicePlayer1.isPlaying()) {
+                    previewVoicePlayer1.stop();
+                }
+                previewVoicePlayer1.release();
+            } catch (Exception ignored) {}
+            previewVoicePlayer1 = null;
+        }
+        if (previewVoicePlayer2 != null) {
+            try {
+                if (previewVoicePlayer2.isPlaying()) {
+                    previewVoicePlayer2.stop();
+                }
+                previewVoicePlayer2.release();
+            } catch (Exception ignored) {}
+            previewVoicePlayer2 = null;
         }
     }
 
@@ -1116,6 +1379,9 @@ public class MainActivity extends Activity {
 
         editor.putBoolean("announce_vibrate", isAnnounceVibrate);
 
+        editor.putBoolean("custom_voice_enabled", isCustomVoiceEnabled);
+        editor.putString("custom_voice_active_id", activeCustomVoiceId);
+
         editor.putString("app_language", currentLanguage);
 
         editor.apply();
@@ -1143,6 +1409,10 @@ public class MainActivity extends Activity {
 
         isAnnounceVibrate = prefs.getBoolean("announce_vibrate", false);
         chkAnnounceVibrate.setChecked(isAnnounceVibrate);
+
+        isCustomVoiceEnabled = prefs.getBoolean("custom_voice_enabled", false);
+        chkCustomVoice.setChecked(isCustomVoiceEnabled);
+        activeCustomVoiceId = prefs.getString("custom_voice_active_id", "");
 
         currentLanguage = prefs.getString("app_language", "en");
     }
@@ -2106,6 +2376,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
         stopPreviewSound();
         stopAlarmPreview();
+        stopVoicePreview();
         if (previewTts != null) {
             previewTts.stop();
             previewTts.shutdown();

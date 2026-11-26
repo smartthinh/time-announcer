@@ -28,6 +28,7 @@ import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.util.Log;
 
+import java.io.File;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.Set;
@@ -55,6 +56,11 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     private boolean isCustomSound = false;
     private String soundPath = "";
     private boolean isVibrateEnabled = false;
+
+    // Custom voice announcement configuration
+    private boolean isCustomVoiceEnabled = false;
+    private String activeCustomVoiceId = "";
+    private MediaPlayer nextPlayer;
 
     // App language ("en" or "vi")
     private String appLanguage = "en";
@@ -283,6 +289,9 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
         soundPath = prefs.getString("sound_path", "sounds/bell.wav");
         isVibrateEnabled = prefs.getBoolean("announce_vibrate", false);
 
+        isCustomVoiceEnabled = prefs.getBoolean("custom_voice_enabled", false);
+        activeCustomVoiceId = prefs.getString("custom_voice_active_id", "");
+
         appLanguage = prefs.getString("app_language", "en");
     }
 
@@ -404,6 +413,9 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
         }
 
         if (!isPlaySoundEnabled || soundPath == null || soundPath.isEmpty()) {
+            if (isCustomVoiceEnabled && playCustomVoiceAnnouncement(hour, minute)) {
+                return;
+            }
             speakTimeTts(hour, minute);
             return;
         }
@@ -427,11 +439,17 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
 
             currentPlayer.setOnCompletionListener(mp -> {
                 stopCurrentPlayer();
+                if (isCustomVoiceEnabled && playCustomVoiceAnnouncement(hour, minute)) {
+                    return;
+                }
                 speakTimeTts(hour, minute);
             });
 
             currentPlayer.setOnErrorListener((mp, what, extra) -> {
                 stopCurrentPlayer();
+                if (isCustomVoiceEnabled && playCustomVoiceAnnouncement(hour, minute)) {
+                    return true;
+                }
                 speakTimeTts(hour, minute);
                 return true;
             });
@@ -442,12 +460,18 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
             handler.postDelayed(() -> {
                 if (currentPlayer != null && currentPlayer.isPlaying()) {
                     stopCurrentPlayer();
+                    if (isCustomVoiceEnabled && playCustomVoiceAnnouncement(hour, minute)) {
+                        return;
+                    }
                     speakTimeTts(hour, minute);
                 }
             }, 8000);
 
         } catch (Exception e) {
             stopCurrentPlayer();
+            if (isCustomVoiceEnabled && playCustomVoiceAnnouncement(hour, minute)) {
+                return;
+            }
             speakTimeTts(hour, minute);
         }
     }
@@ -455,10 +479,137 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     private void stopCurrentPlayer() {
         if (currentPlayer != null) {
             try {
-                currentPlayer.stop();
+                if (currentPlayer.isPlaying()) {
+                    currentPlayer.stop();
+                }
                 currentPlayer.release();
             } catch (Exception ignored) {}
             currentPlayer = null;
+        }
+        if (nextPlayer != null) {
+            try {
+                if (nextPlayer.isPlaying()) {
+                    nextPlayer.stop();
+                }
+                nextPlayer.release();
+            } catch (Exception ignored) {}
+            nextPlayer = null;
+        }
+    }
+
+    private boolean playCustomVoiceAnnouncement(int hour, int minute) {
+        try {
+            if (activeCustomVoiceId == null || activeCustomVoiceId.isEmpty()) {
+                return false;
+            }
+
+            File packDir = new File(CustomVoiceManager.getCustomVoicesDir(this), activeCustomVoiceId);
+            if (!packDir.exists() || !packDir.isDirectory()) {
+                return false;
+            }
+
+            stopCurrentPlayer();
+
+            float vol = Math.max(0.0f, Math.min(1.0f, speechVolume / 100.0f));
+
+            if (minute == 0) {
+                File exactFile = CustomVoiceManager.getHourlyAudioFile(packDir, hour);
+                if (exactFile == null || !exactFile.exists()) {
+                    return false;
+                }
+
+                currentPlayer = new MediaPlayer();
+                MainActivity.applyAudioAttributesToPlayer(currentPlayer, audioStreamIndex);
+                currentPlayer.setDataSource(exactFile.getAbsolutePath());
+                currentPlayer.setVolume(vol, vol);
+                currentPlayer.setOnCompletionListener(mp -> {
+                    stopCurrentPlayer();
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                });
+                currentPlayer.setOnErrorListener((mp, what, extra) -> {
+                    stopCurrentPlayer();
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                    return true;
+                });
+                currentPlayer.prepare();
+                currentPlayer.start();
+                return true;
+
+            } else {
+                File hourFile = CustomVoiceManager.getHourAudioFile(packDir, hour);
+                File minFile = CustomVoiceManager.getMinuteAudioFile(packDir, minute);
+
+                if (hourFile == null || !hourFile.exists() || minFile == null || !minFile.exists()) {
+                    return false;
+                }
+
+                MediaPlayer player1 = new MediaPlayer();
+                MediaPlayer player2 = new MediaPlayer();
+
+                MainActivity.applyAudioAttributesToPlayer(player1, audioStreamIndex);
+                MainActivity.applyAudioAttributesToPlayer(player2, audioStreamIndex);
+
+                player1.setDataSource(hourFile.getAbsolutePath());
+                player2.setDataSource(minFile.getAbsolutePath());
+
+                player1.setVolume(vol, vol);
+                player2.setVolume(vol, vol);
+
+                player1.prepare();
+                player2.prepare();
+
+                currentPlayer = player1;
+                nextPlayer = player2;
+
+                try {
+                    player1.setNextMediaPlayer(player2);
+                    player1.setOnCompletionListener(mp -> {
+                        try {
+                            mp.release();
+                        } catch (Exception ignored) {}
+                        currentPlayer = player2;
+                    });
+                } catch (Exception e) {
+                    player1.setOnCompletionListener(mp -> {
+                        try {
+                            mp.release();
+                        } catch (Exception ignored) {}
+                        currentPlayer = player2;
+                        if (nextPlayer != null) {
+                            try {
+                                nextPlayer.start();
+                            } catch (Exception ex) {
+                                stopCurrentPlayer();
+                                TimeAnnouncementReceiver.releaseWakeLock();
+                            }
+                        }
+                    });
+                }
+
+                player2.setOnCompletionListener(mp -> {
+                    stopCurrentPlayer();
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                });
+
+                player1.setOnErrorListener((mp, what, extra) -> {
+                    stopCurrentPlayer();
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                    return true;
+                });
+
+                player2.setOnErrorListener((mp, what, extra) -> {
+                    stopCurrentPlayer();
+                    TimeAnnouncementReceiver.releaseWakeLock();
+                    return true;
+                });
+
+                player1.start();
+                return true;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error playing custom voice announcement", e);
+            stopCurrentPlayer();
+            return false;
         }
     }
 

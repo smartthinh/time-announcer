@@ -64,6 +64,25 @@
             android:text="@string/chk_announce_vibrate"
             android:textSize="16sp"
             android:textStyle="bold"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <CheckBox
+            android:id="@+id/chkCustomVoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_custom_voice"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnCustomVoice"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/btn_custom_voice"
+            android:textSize="15sp"
             android:layout_marginBottom="20dp"
             android:visibility="gone" />
 
