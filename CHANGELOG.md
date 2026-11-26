@@ -12,6 +12,7 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 - **Always-Visible TTS Settings Button:** The "TTS engine settings" button is now permanently visible on the main screen, allowing Text-to-Speech configuration at any time.
 
 ### Changed
+- **Simplified Alarm Day Selection:** Removed the "Every day" button from the alarm repeat days dialog, keeping the interface clean and letting users check only the desired individual days directly.
 - **Removed Auto-Speak Toggle Popups:** Removed the notification toast messages when turning "Auto speak time" on or off for a quieter, smoother user experience.
 - **Higher Speech Rate Support:** Speech rate can now be adjusted up to 5.0x with smooth slider increments.
 - **Clean Slider Labels:** Streamlined the speech rate, pitch, and speech volume slider labels without redundant numbers or percentage tags for improved clarity and screen reader compatibility.

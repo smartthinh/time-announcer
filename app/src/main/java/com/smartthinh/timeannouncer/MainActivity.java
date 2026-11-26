@@ -1356,7 +1356,6 @@ public class MainActivity extends Activity {
 
     private void showAlarmDaysDialog(final AlarmItem alarm, final Button btnDaysRef) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_alarm_days, null);
-        Button btnEveryday = dialogView.findViewById(R.id.btnAlarmEveryday);
         CheckBox[] chkDays = {
                 dialogView.findViewById(R.id.chkDayMon),
                 dialogView.findViewById(R.id.chkDayTue),
@@ -1373,21 +1372,6 @@ public class MainActivity extends Activity {
         for (int i = 0; i < 7; i++) {
             chkDays[i].setChecked(tempDays[i]);
         }
-
-        btnEveryday.setOnClickListener(v -> {
-            boolean allChecked = true;
-            for (int i = 0; i < 7; i++) {
-                if (!chkDays[i].isChecked()) {
-                    allChecked = false;
-                    break;
-                }
-            }
-            boolean newState = !allChecked;
-            for (int i = 0; i < 7; i++) {
-                chkDays[i].setChecked(newState);
-                tempDays[i] = newState;
-            }
-        });
 
         for (int i = 0; i < 7; i++) {
             final int dayIdx = i;

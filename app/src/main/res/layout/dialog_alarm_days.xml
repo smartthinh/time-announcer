@@ -9,21 +9,6 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <Button
-            android:id="@+id/btnAlarmEveryday"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="@string/alarm_days_everyday"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#CCCCCC"
-            android:layout_marginBottom="12dp" />
-
         <CheckBox
             android:id="@+id/chkDayMon"
             android:layout_width="match_parent"

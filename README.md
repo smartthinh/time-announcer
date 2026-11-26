@@ -26,7 +26,7 @@ The application runs reliably in the background as a foreground service and requ
   - Inline input hints for hour, minute, snooze repeats, snooze interval, and TTS message.
   - Configurable snooze count and snooze delay interval.
   - Optional TTS announcement message read aloud repeatedly while the alarm is ringing.
-  - Flexible day recurrence dialog with an Every day button and 7 day-of-week checkboxes (defaults to today).
+  - Flexible day recurrence dialog with 7 day-of-week checkboxes (defaults to today).
   - Ringtone picker featuring all default system alarm ringtones with instant playback preview, plus picking any music file from device internal storage.
   - Continuous ringtone looping so melodies never cut off mid-alarm.
   - Dedicated sound and vibration toggles with continuous, looping alarm vibration.
@@ -90,7 +90,7 @@ Tap the Set alarm button on the main screen to open the alarm manager dialog:
   - Current hour and minute are auto-filled. Input limits are strictly enforced (0-23 for hours, 0-59 for minutes).
   - Set the number of snooze repetitions and the snooze interval in minutes.
   - Optionally enter text in the announcement field for Text-to-Speech to read aloud while the alarm is ringing.
-  - Tap Repeat days to open the recurrence dialog. Use the Every day button or individual day checkboxes (defaults to the current day of the week).
+  - Tap Repeat days to open the recurrence dialog and select any combination of days using the day checkboxes (defaults to the current day of the week).
   - Use the Sound checkbox to enable or mute the ringtone, and tap Ringtone to select from default device alarm sounds or pick any custom audio file from your device internal storage.
   - Use the Vibrate checkbox to enable or disable continuous rhythmic alarm vibration throughout ringing.
   - When the alarm rings, the screen wakes up and displays the alarm alert dialog with Snooze and Dismiss buttons. The ringtone and vibration loop continuously and automatically silence after 10 minutes if unattended.
