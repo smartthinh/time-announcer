@@ -21,7 +21,7 @@ The application runs reliably in the background as a foreground service and requ
 - Five Audio Streams: Route speech and chime playback through five separate system audio channels: Media volume stream, Ring volume stream, Alarm volume stream, Accessibility volume stream, or Notification volume stream.
 - Chime Audio Playback: Optionally play a chime before reading the time. Includes 18 bundled chime sounds and supports picking any custom audio file from your device internal storage.
 - Vibrate with Announcement: Optionally vibrate whenever the time announcement triggers, keeping you informed even in noisy environments or discreet situations.
-- Custom Voice Pack Support: Import personalized voice recordings via .zip packages containing `hour`, `hourly`, and `minutes` directories with metadata JSON. Enjoy natural and completely seamless (gapless) voice announcements.
+- Custom Voice Pack Support: Import personalized voice recordings via .zip packages containing `hour`, `hourly`, and `minutes` directories (metadata JSON is optional; the package automatically uses the ZIP file name if JSON is omitted). Enjoy natural and completely seamless (gapless) voice announcements.
 - Comprehensive Alarm Clock:
   - Exact time scheduling with hours (0-23) and minutes (0-59) with auto-fill of current time and strict input validation.
   - Inline input hints for hour, minute, snooze repeats, snooze interval, and TTS message.

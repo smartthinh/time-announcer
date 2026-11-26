@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -237,15 +238,27 @@ public class CustomVoiceManager {
             }
 
             if (packName == null || packName.isEmpty()) {
-                if (originalFileName != null && originalFileName.toLowerCase().endsWith(".zip")) {
-                    packName = originalFileName.substring(0, originalFileName.length() - 4);
-                } else {
+                if (originalFileName != null && !originalFileName.trim().isEmpty()) {
+                    String baseName = originalFileName.trim();
+                    if (baseName.toLowerCase().endsWith(".zip")) {
+                        baseName = baseName.substring(0, baseName.length() - 4).trim();
+                    }
+                    if (!baseName.isEmpty()) {
+                        packName = baseName;
+                    }
+                }
+                if (packName == null || packName.isEmpty()) {
                     packName = "Custom Voice " + System.currentTimeMillis();
                 }
             }
 
             if (packId == null || packId.isEmpty()) {
-                packId = "voice_" + System.currentTimeMillis();
+                String sanitized = packName.replaceAll("[^a-zA-Z0-9_\\-]", "_");
+                if (sanitized.isEmpty() || sanitized.replace("_", "").isEmpty()) {
+                    packId = "voice_" + System.currentTimeMillis();
+                } else {
+                    packId = sanitized;
+                }
             } else {
                 packId = packId.replaceAll("[^a-zA-Z0-9_\\-]", "_");
             }
@@ -259,6 +272,23 @@ public class CustomVoiceManager {
 
             // Copy contents from effectiveRoot to destDir
             copyDirectory(effectiveRoot, destDir);
+
+            // If no json file exists in the pack, generate a pack.json so the name (from ZIP) is permanently preserved
+            File[] existingJson = destDir.listFiles((d, fName) -> fName.toLowerCase().endsWith(".json"));
+            if (existingJson == null || existingJson.length == 0) {
+                File packJson = new File(destDir, "pack.json");
+                try (FileOutputStream fos = new FileOutputStream(packJson);
+                     OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("name", packName);
+                    obj.put("id", packId);
+                    obj.put("language", packLanguage != null ? packLanguage : "vi");
+                    obj.put("author", packAuthor != null ? packAuthor : "");
+                    writer.write(obj.toString(2));
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to write pack.json fallback", e);
+                }
+            }
 
             // Return new pack
             return new VoicePack(packId, packName, packLanguage, packAuthor, destDir);

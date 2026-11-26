@@ -148,13 +148,18 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static volatile boolean sMigrated = false;
+
     public static SharedPreferences getSafeSharedPreferences(Context context) {
         Context storageContext = context;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             storageContext = context.createDeviceProtectedStorageContext();
-            try {
-                storageContext.moveSharedPreferencesFrom(context, PREFS_NAME);
-            } catch (Exception ignored) {}
+            if (!sMigrated) {
+                try {
+                    storageContext.moveSharedPreferencesFrom(context, PREFS_NAME);
+                } catch (Exception ignored) {}
+                sMigrated = true;
+            }
         }
         return storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
@@ -258,7 +263,6 @@ public class MainActivity extends Activity {
             isPlaySoundEnabled = isChecked;
             btnSelectSound.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             savePreferences();
-            restartServiceIfRunning();
         });
 
         // Button "Select sound"
@@ -268,7 +272,6 @@ public class MainActivity extends Activity {
         chkAnnounceVibrate.setOnCheckedChangeListener((buttonView, isChecked) -> {
             isAnnounceVibrate = isChecked;
             savePreferences();
-            restartServiceIfRunning();
         });
 
         // Checkbox "Use custom voice announcement"
@@ -276,7 +279,6 @@ public class MainActivity extends Activity {
             isCustomVoiceEnabled = isChecked;
             btnCustomVoice.setVisibility((chkAutoSpeak.isChecked() && isChecked) ? View.VISIBLE : View.GONE);
             savePreferences();
-            restartServiceIfRunning();
         });
 
         // Button "Custom voice announcement"
@@ -513,7 +515,6 @@ public class MainActivity extends Activity {
                     stopPreviewSound();
                     btnSelectSound.setText(getString(R.string.btn_select_sound_prefix, selectedSoundName));
                     savePreferences();
-                    restartServiceIfRunning();
                 })
                 .setNeutralButton(getString(R.string.btn_select_storage), (dialog, which) -> {
                     stopPreviewSound();
@@ -751,9 +752,14 @@ public class MainActivity extends Activity {
             chkItem.setOnClickListener(v -> {
                 activeCustomVoiceId = pack.id;
                 savePreferences();
-                restartServiceIfRunning();
                 Toast.makeText(this, getString(R.string.voice_pack_selected, pack.name), Toast.LENGTH_SHORT).show();
-                populateVoicePackList(dialog);
+                for (int i = 0; i < llVoicePacks.getChildCount(); i++) {
+                    View child = llVoicePacks.getChildAt(i);
+                    CheckBox cb = child.findViewById(R.id.chkVoicePack);
+                    if (cb != null) {
+                        cb.setChecked(cb == chkItem);
+                    }
+                }
             });
 
             btnPreview.setOnClickListener(v -> playCustomVoicePreview(pack));
@@ -1353,7 +1359,9 @@ public class MainActivity extends Activity {
 
     private void restartServiceIfRunning() {
         if (chkAutoSpeak.isChecked()) {
-            startAnnouncerService();
+            new Thread(() -> {
+                TimeAnnouncementService.scheduleNextAnnouncement(MainActivity.this);
+            }).start();
         }
     }
 

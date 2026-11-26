@@ -7,12 +7,13 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 ## [Unreleased]
 
 ### Added
-- **Custom Voice Pack Support:** Import and use personalized voice recordings via .zip packages containing `hour`, `hourly`, `minutes`, and a descriptor JSON file. Easily select, preview, or delete voice packs, and enjoy seamless, natural gapless time speech without pauses between hours and minutes.
+- **Custom Voice Pack Support:** Import and use personalized voice recordings via .zip packages containing `hour`, `hourly`, and `minutes` folders. If a descriptor JSON file is not included, the package automatically adopts the ZIP file name as its display name. Easily select, preview, or delete voice packs, and enjoy seamless, natural gapless time speech without pauses between hours and minutes.
 - **Vibration with Time Announcements:** Added a dedicated "Vibrate with announcement" checkbox on the main screen (visible when auto-speak is enabled). When checked, the device vibrates each time an announcement triggers; unchecked by default.
 - **Alarm Sound & Vibration Toggles:** Added independent "Sound" and "Vibrate" checkboxes in the alarm dialog. Alarms can now ring with audio, vibrate in a continuous rhythmic pattern, or both. The ringtone picker automatically hides when sound is disabled.
 - **Always-Visible TTS Settings Button:** The "TTS engine settings" button is now permanently visible on the main screen, allowing Text-to-Speech configuration at any time.
 
 ### Changed
+- **Optimized UI Responsiveness:** Eliminated stutter and delays when toggling checkboxes or selecting options in dialogs for instant, fluid interactions.
 - **Simplified Alarm Day Selection:** Removed the "Every day" button from the alarm repeat days dialog, keeping the interface clean and letting users check only the desired individual days directly.
 - **Removed Auto-Speak Toggle Popups:** Removed the notification toast messages when turning "Auto speak time" on or off for a quieter, smoother user experience.
 - **Higher Speech Rate Support:** Speech rate can now be adjusted up to 5.0x with smooth slider increments.

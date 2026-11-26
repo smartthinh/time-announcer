@@ -71,6 +71,7 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     private int lastAnnouncedMinute = -1;
     private int lastAnnouncedHour = -1;
     private PowerManager.WakeLock wakeLock;
+    private SharedPreferences.OnSharedPreferenceChangeListener prefChangeListener;
 
     public static void startAnnouncerService(Context context) {
         Intent intent = new Intent(context, TimeAnnouncementService.class);
@@ -242,12 +243,26 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
 
         // 5. Ensure AlarmManager exact trigger is scheduled for deep sleep/doze mode
         scheduleNextAnnouncement(this);
+
+        // 6. Register preferences listener to update settings immediately without service restart
+        prefChangeListener = (prefs, key) -> {
+            loadSettings();
+            if ("tts_engine".equals(key) || "tts_voice".equals(key) || "speech_rate".equals(key) || "speech_pitch".equals(key) || "audio_stream_index".equals(key)) {
+                new Thread(this::applyTtsSettings).start();
+            }
+            if ("interval".equals(key)) {
+                scheduleNextAnnouncement(this);
+            }
+        };
+        try {
+            MainActivity.getSafeSharedPreferences(this).registerOnSharedPreferenceChangeListener(prefChangeListener);
+        } catch (Exception ignored) {}
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         loadSettings();
-        applyTtsSettings();
+        new Thread(this::applyTtsSettings).start();
 
         if (intent != null && ACTION_ANNOUNCE_NOW.equals(intent.getAction())) {
             Calendar calendar = Calendar.getInstance();
@@ -746,6 +761,11 @@ public class TimeAnnouncementService extends Service implements TextToSpeech.OnI
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (prefChangeListener != null) {
+            try {
+                MainActivity.getSafeSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(prefChangeListener);
+            } catch (Exception ignored) {}
+        }
         stopCurrentPlayer();
         try {
             Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
