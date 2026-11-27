@@ -7,6 +7,12 @@ All notable changes, new features, and improvements for **Time Announcer** are d
 ## [Unreleased]
 
 ### Added
+- **Countdown Timer:** Added a comprehensive timer feature accessible via the "Timer" button on the main screen:
+  - **Create and Configure Timers:** Set timer name, duration in minutes, optional completion message spoken via TTS, sound playback toggle with bundled sounds and device storage audio picker, and vibration toggle.
+  - **Intuitive Controller Dialog:** Displays real-time countdown with dynamic controls (Start, Pause, Resume, and End permanently) and live background countdown synchronization.
+  - **Interactive Timer Manager:** Displays all saved timers, supports long-press multi-select mode with "Select all", "Delete", and an "Edit" button that dynamically appears only when exactly one timer is selected.
+  - **Full Alert Experience:** Loops audio and continuous vibration upon completion, speaks custom messages via TTS, wakes the screen with an alert dialog, posts a persistent status bar notification, and automatically silences after 1 minute (shorter than the alarm's 10 minutes).
+  - **Quick Return & Notification Controls:** Tapping the ongoing notification or the "Timer" button on the main screen opens directly into the active timer controller dialog. Convenient action buttons ("Pause", "Resume", "End") on the status bar notification allow controlling the countdown without opening the app.
 - **Custom Voice Pack Support:** Import and use personalized voice recordings via .zip packages containing `hour`, `hourly`, and `minutes` folders. If a descriptor JSON file is not included, the package automatically adopts the ZIP file name as its display name. Easily select, preview, or delete voice packs, and enjoy seamless, natural gapless time speech without pauses between hours and minutes.
 - **Vibration with Time Announcements:** Added a dedicated "Vibrate with announcement" checkbox on the main screen (visible when auto-speak is enabled). When checked, the device vibrates each time an announcement triggers; unchecked by default.
 - **Alarm Sound & Vibration Toggles:** Added independent "Sound" and "Vibrate" checkboxes in the alarm dialog. Alarms can now ring with audio, vibrate in a continuous rhythmic pattern, or both. The ringtone picker automatically hides when sound is disabled.

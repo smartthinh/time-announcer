@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Timer Name -->
+        <EditText
+            android:id="@+id/edtTimerName"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="@string/hint_timer_name"
+            android:inputType="text"
+            android:textSize="15sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Minutes -->
+        <EditText
+            android:id="@+id/edtTimerMinutes"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="@string/hint_timer_minutes"
+            android:inputType="number"
+            android:maxLength="4"
+            android:textSize="15sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- TTS message -->
+        <EditText
+            android:id="@+id/edtTimerMessage"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="@string/hint_timer_message"
+            android:inputType="text"
+            android:textSize="15sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Sound and Vibration Checkboxes -->
+        <CheckBox
+            android:id="@+id/chkTimerSound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_timer_sound"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:checked="true"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Sound Picker Button (visible only when chkTimerSound is checked) -->
+        <Button
+            android:id="@+id/btnTimerSelectSound"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/btn_timer_select_sound"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <CheckBox
+            android:id="@+id/chkTimerVibrate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/chk_timer_vibrate"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:checked="true"
+            android:layout_marginBottom="16dp" />
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/txtTimerCtrlName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bộ hẹn giờ"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#222222"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/txtTimerCtrlStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/timer_status_idle"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Big Countdown Display -->
+    <TextView
+        android:id="@+id/txtTimerCtrlCountdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:textColor="#1976D2"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Action Button (Bắt đầu / Dừng tạm thời / Tiếp tục) -->
+    <Button
+        android:id="@+id/btnTimerCtrlAction"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="@string/btn_timer_start"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Stop Button (Kết thúc vĩnh viễn) -->
+    <Button
+        android:id="@+id/btnTimerCtrlStop"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="@string/btn_timer_end_permanently"
+        android:textSize="15sp"
+        android:textColor="#D32F2F"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Action buttons row: Danh sách / Đóng -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnTimerCtrlList"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="@string/btn_timer_all_timers"
+            android:textSize="14sp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnTimerCtrlClose"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="@string/btn_close"
+            android:textSize="14sp"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+</LinearLayout>

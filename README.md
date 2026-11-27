@@ -22,6 +22,13 @@ The application runs reliably in the background as a foreground service and requ
 - Chime Audio Playback: Optionally play a chime before reading the time. Includes 18 bundled chime sounds and supports picking any custom audio file from your device internal storage.
 - Vibrate with Announcement: Optionally vibrate whenever the time announcement triggers, keeping you informed even in noisy environments or discreet situations.
 - Custom Voice Pack Support: Import personalized voice recordings via .zip packages containing `hour`, `hourly`, and `minutes` directories (metadata JSON is optional; the package automatically uses the ZIP file name if JSON is omitted). Enjoy natural and completely seamless (gapless) voice announcements.
+- Countdown Timer:
+  - Create and configure timers with custom names, duration in minutes, optional completion message read via TTS, independent sound and vibration controls.
+  - Sound selection supporting all bundled chime sounds as well as custom audio files chosen directly from device internal storage.
+  - Dedicated controller dialog with real-time countdown display and full playback lifecycle controls: Start, Pause, Resume, and End permanently (resets countdown).
+  - Background execution with live notification updates and full Doze/screen-off exact alarm reliability.
+  - Interactive timer manager dialog supporting tap-to-control, long-press multi-select mode with "Select all", "Delete", and a contextual "Edit" button that automatically appears only when exactly one timer is selected.
+  - Completion alert dialog waking the screen with continuous ringing, rhythmic vibration, optional TTS repeated reading, and an easy one-tap dismiss button.
 - Comprehensive Alarm Clock:
   - Exact time scheduling with hours (0-23) and minutes (0-59) with auto-fill of current time and strict input validation.
   - Inline input hints for hour, minute, snooze repeats, snooze interval, and TTS message.
@@ -96,14 +103,30 @@ Tap the Set alarm button on the main screen to open the alarm manager dialog:
   - Use the Vibrate checkbox to enable or disable continuous rhythmic alarm vibration throughout ringing.
   - When the alarm rings, the screen wakes up and displays the alarm alert dialog with Snooze and Dismiss buttons. The ringtone and vibration loop continuously and automatically silence after 10 minutes if unattended.
 
-### 8. Checking for Updates
+### 8. Using the Countdown Timer
+Tap the Timer button on the main screen to open the timer manager dialog:
+- View all saved timers with their configured duration, current state, and remaining time.
+- Tap any timer to open the controller countdown dialog:
+  - Tap Start to begin counting down.
+  - While counting down, the action button dynamically changes to Pause.
+  - While paused, tap Resume to continue counting down.
+  - Tap End permanently to completely stop and reset the timer back to its initial duration. After ending, you can tap Start again whenever you wish.
+  - Tap Close to dismiss the controller dialog; the timer continues counting down accurately in the background.
+- Long-press any timer to switch into multi-select mode:
+  - Use Select all to select or deselect all timers at once.
+  - Tap Delete to remove all selected timers.
+  - When exactly ONE timer is selected, the Edit button appears, allowing you to edit that timer's name, minutes, notification text, sound, and vibration settings. If more than one or zero timers are selected, the Edit button automatically hides.
+- Tap Create timer to configure a new timer with name, duration in minutes, completion message, sound toggle (with bundled or internal storage audio picker), and vibration toggle.
+- When the countdown finishes, the screen turns on to display the alert dialog, playing the chosen alert sound and vibrating continuously until you tap Dismiss.
+
+### 9. Checking for Updates
 The app automatically checks for new updates in the background each time you launch it. You can also tap the Check for updates button on the main screen to check manually at any time:
 - If your app is up to date, a message notifies you that you are using the latest version (when checking manually).
 - If an update is available, a dialog displays the release title and detailed changelog notes line-by-line.
 - Tap Download to start downloading the update with a smooth, real-time 0% to 100% progress bar and size counter.
 - Once downloaded, the application automatically prompts to install the new update.
 
-### 9. Information and Support
+### 10. Information and Support
 Tap the About button at the bottom of the main screen to access:
 - About: Application summary.
 - User guide: Quick reference explaining core features.
@@ -131,7 +154,12 @@ time-announcer/
 │           │               ├── BootReceiver.java
 │           │               ├── GenericFileProvider.java
 │           │               ├── MainActivity.java
-│           │               └── TimeAnnouncementService.java
+│           │               ├── TimeAnnouncementService.java
+│           │               ├── TimerAlertActivity.java
+│           │               ├── TimerItem.java
+│           │               ├── TimerManagerHelper.java
+│           │               ├── TimerReceiver.java
+│           │               └── TimerService.java
 │           └── res/
 │               ├── layout/
 │               │   ├── activity_main.xml
@@ -140,9 +168,15 @@ time-announcer/
 │               │   ├── dialog_alarm_days.xml
 │               │   ├── dialog_alarm_edit.xml
 │               │   ├── dialog_alarm_list.xml
+│               │   ├── dialog_custom_voice.xml
+│               │   ├── dialog_timer_alert.xml
+│               │   ├── dialog_timer_controller.xml
+│               │   ├── dialog_timer_edit.xml
+│               │   ├── dialog_timer_list.xml
 │               │   ├── dialog_tts_settings.xml
 │               │   ├── dialog_update.xml
-│               │   └── item_alarm.xml
+│               │   ├── item_alarm.xml
+│               │   └── item_timer.xml
 │               ├── values/
 │               │   └── strings.xml      # English resources
 │               ├── values-vi/

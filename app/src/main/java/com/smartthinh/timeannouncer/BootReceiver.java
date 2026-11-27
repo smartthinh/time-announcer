@@ -35,5 +35,26 @@ public class BootReceiver extends BroadcastReceiver {
         } catch (Exception e) {
             Log.e(TAG, "Failed to restore TimeAnnouncementService on boot", e);
         }
+
+        // 3. Reschedule running timers across reboots
+        try {
+            java.util.List<TimerItem> timers = TimerManagerHelper.loadTimers(context);
+            for (TimerItem timer : timers) {
+                if (timer.getState() == TimerItem.STATE_RUNNING) {
+                    long remaining = timer.getEndTimestamp() - System.currentTimeMillis();
+                    if (remaining > 0) {
+                        timer.setRemainingMillis(remaining);
+                        TimerManagerHelper.saveOrUpdateTimer(context, timer);
+                        TimerService.resumeTimer(context, timer.getId());
+                        Log.d(TAG, "Resumed running timer on boot: " + timer.getName());
+                    } else {
+                        TimerService.onTimerAlarmTriggered(context, timer.getId());
+                        Log.d(TAG, "Triggered expired timer on boot: " + timer.getName());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to restore timers on boot", e);
+        }
     }
 }

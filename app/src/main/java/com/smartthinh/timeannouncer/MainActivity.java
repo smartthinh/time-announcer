@@ -6,8 +6,10 @@ import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -97,6 +99,18 @@ public class MainActivity extends Activity {
     private AlarmItem currentEditingAlarm;
     private Button currentAlarmRingtoneBtnRef;
     private MediaPlayer alarmPreviewPlayer;
+
+    // Timer feature
+    private static final int REQUEST_CODE_PICK_TIMER_AUDIO = 205;
+    private Button btnTimerList;
+    private TimerItem currentEditingTimer;
+    private Button currentTimerSoundBtnRef;
+    private AlertDialog currentTimerCtrlDialog;
+    private long currentCtrlTimerId = -1;
+    private TextView txtCurrentTimerCountdown;
+    private TextView txtCurrentTimerStatus;
+    private Button btnCurrentTimerAction;
+    private BroadcastReceiver timerTickReceiver;
 
     // Update button and download thread
     private Button btnCheckUpdate;
@@ -216,6 +230,7 @@ public class MainActivity extends Activity {
         chkCustomVoice = findViewById(R.id.chkCustomVoice);
         btnCustomVoice = findViewById(R.id.btnCustomVoice);
         btnAlarmList = findViewById(R.id.btnAlarmList);
+        btnTimerList = findViewById(R.id.btnTimerList);
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
         btnLanguage = findViewById(R.id.btnLanguage);
         btnAbout = findViewById(R.id.btnAbout);
@@ -290,6 +305,33 @@ public class MainActivity extends Activity {
             showAlarmListDialog();
         });
 
+        // Button "Timer"
+        btnTimerList.setOnClickListener(v -> {
+            checkExactAlarmPermission();
+            TimerItem runningTimer = TimerManagerHelper.getActiveRunningTimer(MainActivity.this);
+            if (runningTimer != null) {
+                showTimerControllerDialog(runningTimer);
+            } else {
+                showTimerListDialog();
+            }
+        });
+
+        // Receiver for timer countdown ticks and status updates
+        timerTickReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (TimerService.ACTION_TIMER_TICK.equals(intent.getAction())) {
+                    updateTimerControllerDialogIfOpen();
+                }
+            }
+        };
+        IntentFilter timerFilter = new IntentFilter(TimerService.ACTION_TIMER_TICK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(timerTickReceiver, timerFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(timerTickReceiver, timerFilter);
+        }
+
         // Button "Check for updates"
         btnCheckUpdate.setOnClickListener(v -> checkForUpdates(true));
 
@@ -301,6 +343,28 @@ public class MainActivity extends Activity {
 
         // Button "About"
         btnAbout.setOnClickListener(v -> showAboutDialog());
+
+        // Check if opened from timer status bar notification
+        handleOpenTimerIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleOpenTimerIntent(intent);
+    }
+
+    private void handleOpenTimerIntent(Intent intent) {
+        if (intent != null && intent.hasExtra("open_timer_id")) {
+            long timerId = intent.getLongExtra("open_timer_id", -1);
+            if (timerId != -1) {
+                TimerItem timer = TimerManagerHelper.getTimerById(this, timerId);
+                if (timer != null) {
+                    showTimerControllerDialog(timer);
+                }
+            }
+        }
     }
 
     @Override
@@ -592,6 +656,28 @@ public class MainActivity extends Activity {
 
                 String fileName = getFileNameFromUri(uri);
                 importVoicePackZip(uri, fileName);
+            }
+        } else if (requestCode == REQUEST_CODE_PICK_TIMER_AUDIO && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                try {
+                    final int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                } catch (Exception ignored) {}
+
+                String fileName = getFileNameFromUri(uri);
+                if (fileName == null || fileName.isEmpty()) {
+                    fileName = "Audio";
+                }
+                if (currentEditingTimer != null) {
+                    currentEditingTimer.setSoundPath(uri.toString());
+                    currentEditingTimer.setSoundName(fileName);
+                    currentEditingTimer.setCustomSound(true);
+                }
+                if (currentTimerSoundBtnRef != null) {
+                    currentTimerSoundBtnRef.setText(getString(R.string.btn_timer_select_sound, fileName));
+                }
+                playPreviewSound(new SoundItem(fileName, uri.toString(), false));
             }
         }
     }
@@ -1936,6 +2022,436 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
+    // ==================== TIMER IMPLEMENTATION ====================
+
+    private void showTimerListDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_timer_list, null);
+        final LinearLayout llMultiSelectActions = dialogView.findViewById(R.id.llTimerMultiSelectActions);
+        final Button btnSelectAll = dialogView.findViewById(R.id.btnSelectAllTimers);
+        final Button btnEditSelected = dialogView.findViewById(R.id.btnEditSelectedTimer);
+        final Button btnDeleteSelected = dialogView.findViewById(R.id.btnDeleteSelectedTimers);
+        final Button btnCancelMultiSelect = dialogView.findViewById(R.id.btnCancelMultiSelectTimers);
+        final Button btnCreateTimer = dialogView.findViewById(R.id.btnCreateTimer);
+        final TextView txtEmptyTimers = dialogView.findViewById(R.id.txtEmptyTimers);
+        final LinearLayout llContainer = dialogView.findViewById(R.id.llTimerListContainer);
+        final Button btnClose = dialogView.findViewById(R.id.btnCloseTimerList);
+
+        final boolean[] isMultiSelectMode = {false};
+        final Set<Long> selectedIds = new HashSet<>();
+
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.timer_list_title))
+                .setView(dialogView)
+                .create();
+
+        final Runnable renderList = new Runnable() {
+            @Override
+            public void run() {
+                llContainer.removeAllViews();
+                List<TimerItem> timers = TimerManagerHelper.loadTimers(MainActivity.this);
+
+                if (timers.isEmpty()) {
+                    txtEmptyTimers.setVisibility(View.VISIBLE);
+                    llMultiSelectActions.setVisibility(View.GONE);
+                    btnCreateTimer.setVisibility(View.VISIBLE);
+                    return;
+                } else {
+                    txtEmptyTimers.setVisibility(View.GONE);
+                }
+
+                if (isMultiSelectMode[0]) {
+                    llMultiSelectActions.setVisibility(View.VISIBLE);
+                    btnCreateTimer.setVisibility(View.GONE);
+                    btnEditSelected.setVisibility(selectedIds.size() == 1 ? View.VISIBLE : View.GONE);
+                } else {
+                    llMultiSelectActions.setVisibility(View.GONE);
+                    btnCreateTimer.setVisibility(View.VISIBLE);
+                }
+
+                LayoutInflater inflater = LayoutInflater.from(MainActivity.this);
+                for (final TimerItem timer : timers) {
+                    View itemView = inflater.inflate(R.layout.item_timer, llContainer, false);
+                    Button btnTimerItem = itemView.findViewById(R.id.btnTimerItem);
+                    CheckBox chkTimerItem = itemView.findViewById(R.id.chkTimerItem);
+
+                    String name = (timer.getName() == null || timer.getName().isEmpty()) ?
+                            getString(R.string.btn_timer) : timer.getName();
+                    StringBuilder label = new StringBuilder();
+                    label.append(name).append(" (").append(timer.getMinutes())
+                            .append(" ").append(getString(R.string.hint_timer_minutes).toLowerCase()).append(")");
+
+                    if (timer.getState() == TimerItem.STATE_RUNNING) {
+                        label.append("\n").append(getString(R.string.timer_status_running))
+                                .append(" [").append(timer.getFormattedRemainingTime()).append("]");
+                    } else if (timer.getState() == TimerItem.STATE_PAUSED) {
+                        label.append("\n").append(getString(R.string.timer_status_paused))
+                                .append(" [").append(timer.getFormattedRemainingTime()).append("]");
+                    } else if (timer.getState() == TimerItem.STATE_FINISHED) {
+                        label.append("\n").append(getString(R.string.timer_status_finished));
+                    }
+
+                    if (!timer.getMessage().isEmpty()) {
+                        label.append("\n").append(timer.getMessage());
+                    }
+
+                    if (!isMultiSelectMode[0]) {
+                        btnTimerItem.setVisibility(View.VISIBLE);
+                        chkTimerItem.setVisibility(View.GONE);
+                        btnTimerItem.setText(label.toString());
+
+                        btnTimerItem.setOnClickListener(v -> {
+                            dialog.dismiss();
+                            showTimerControllerDialog(timer);
+                        });
+
+                        btnTimerItem.setOnLongClickListener(v -> {
+                            isMultiSelectMode[0] = true;
+                            selectedIds.clear();
+                            selectedIds.add(timer.getId());
+                            run();
+                            return true;
+                        });
+                    } else {
+                        btnTimerItem.setVisibility(View.GONE);
+                        chkTimerItem.setVisibility(View.VISIBLE);
+                        chkTimerItem.setText(label.toString());
+                        chkTimerItem.setChecked(selectedIds.contains(timer.getId()));
+
+                        chkTimerItem.setOnCheckedChangeListener((btn, isChecked) -> {
+                            if (isChecked) {
+                                selectedIds.add(timer.getId());
+                            } else {
+                                selectedIds.remove(timer.getId());
+                            }
+                            btnEditSelected.setVisibility(selectedIds.size() == 1 ? View.VISIBLE : View.GONE);
+                        });
+                    }
+
+                    llContainer.addView(itemView);
+                }
+            }
+        };
+
+        btnSelectAll.setOnClickListener(v -> {
+            List<TimerItem> timers = TimerManagerHelper.loadTimers(MainActivity.this);
+            if (selectedIds.size() == timers.size()) {
+                selectedIds.clear();
+            } else {
+                for (TimerItem t : timers) {
+                    selectedIds.add(t.getId());
+                }
+            }
+            renderList.run();
+        });
+
+        btnEditSelected.setOnClickListener(v -> {
+            if (selectedIds.size() == 1) {
+                long id = selectedIds.iterator().next();
+                TimerItem timer = TimerManagerHelper.getTimerById(MainActivity.this, id);
+                if (timer != null) {
+                    dialog.dismiss();
+                    showTimerEditDialog(timer, true);
+                }
+            }
+        });
+
+        btnDeleteSelected.setOnClickListener(v -> {
+            if (selectedIds.isEmpty()) return;
+            int count = selectedIds.size();
+            for (Long id : selectedIds) {
+                TimerService.stopTimer(MainActivity.this, id);
+            }
+            TimerManagerHelper.deleteTimers(MainActivity.this, new ArrayList<>(selectedIds));
+            selectedIds.clear();
+            isMultiSelectMode[0] = false;
+            renderList.run();
+            Toast.makeText(MainActivity.this, getString(R.string.toast_timer_deleted, count), Toast.LENGTH_SHORT).show();
+        });
+
+        btnCancelMultiSelect.setOnClickListener(v -> {
+            isMultiSelectMode[0] = false;
+            selectedIds.clear();
+            renderList.run();
+        });
+
+        btnCreateTimer.setOnClickListener(v -> {
+            dialog.dismiss();
+            showTimerEditDialog(null, true);
+        });
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        renderList.run();
+        dialog.show();
+    }
+
+    private void showTimerEditDialog(final TimerItem timerToEdit, final boolean returnToList) {
+        final boolean isEditMode = (timerToEdit != null);
+        final TimerItem currentTimer = isEditMode ? timerToEdit : new TimerItem();
+        currentEditingTimer = currentTimer;
+
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_timer_edit, null);
+        final EditText edtName = dialogView.findViewById(R.id.edtTimerName);
+        final EditText edtMinutes = dialogView.findViewById(R.id.edtTimerMinutes);
+        final EditText edtMessage = dialogView.findViewById(R.id.edtTimerMessage);
+        final CheckBox chkSound = dialogView.findViewById(R.id.chkTimerSound);
+        final Button btnSelectSound = dialogView.findViewById(R.id.btnTimerSelectSound);
+        final CheckBox chkVibrate = dialogView.findViewById(R.id.chkTimerVibrate);
+
+        if (isEditMode) {
+            edtName.setText(currentTimer.getName());
+            edtMinutes.setText(String.valueOf(currentTimer.getMinutes()));
+            edtMessage.setText(currentTimer.getMessage());
+            chkSound.setChecked(currentTimer.isSoundEnabled());
+            chkVibrate.setChecked(currentTimer.isVibrate());
+        } else {
+            edtName.setText("");
+            edtMinutes.setText("5");
+            edtMessage.setText("");
+            chkSound.setChecked(true);
+            chkVibrate.setChecked(true);
+        }
+
+        btnSelectSound.setText(getString(R.string.btn_timer_select_sound, currentTimer.getSoundName()));
+        btnSelectSound.setVisibility(chkSound.isChecked() ? View.VISIBLE : View.GONE);
+
+        chkSound.setOnCheckedChangeListener((btn, isChecked) -> {
+            btnSelectSound.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        btnSelectSound.setOnClickListener(v -> showTimerSoundSelectionDialog(currentTimer, btnSelectSound));
+
+        final AlertDialog editDialog = new AlertDialog.Builder(this)
+                .setTitle(isEditMode ? getString(R.string.dialog_timer_edit_title) : getString(R.string.dialog_timer_create_title))
+                .setView(dialogView)
+                .setPositiveButton(getString(R.string.btn_ok), null)
+                .setNegativeButton(getString(R.string.btn_cancel), (d, which) -> {
+                    if (returnToList) {
+                        showTimerListDialog();
+                    }
+                })
+                .create();
+
+        editDialog.setOnShowListener(d -> {
+            Button btnOk = editDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            btnOk.setOnClickListener(v -> {
+                String minText = edtMinutes.getText().toString().trim();
+                int minutes = 0;
+                try {
+                    minutes = Integer.parseInt(minText);
+                } catch (Exception ignored) {}
+
+                if (minutes <= 0) {
+                    Toast.makeText(MainActivity.this, getString(R.string.toast_invalid_minutes), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                String name = edtName.getText().toString().trim();
+                if (name.isEmpty()) {
+                    name = getString(R.string.btn_timer) + " " + minutes + "m";
+                }
+
+                currentTimer.setName(name);
+                currentTimer.setMinutes(minutes);
+                currentTimer.setMessage(edtMessage.getText().toString().trim());
+                currentTimer.setSoundEnabled(chkSound.isChecked());
+                currentTimer.setVibrate(chkVibrate.isChecked());
+
+                if (currentTimer.getState() == TimerItem.STATE_IDLE) {
+                    currentTimer.setRemainingMillis(minutes * 60 * 1000L);
+                }
+
+                TimerManagerHelper.saveOrUpdateTimer(MainActivity.this, currentTimer);
+                Toast.makeText(MainActivity.this, getString(R.string.toast_timer_saved), Toast.LENGTH_SHORT).show();
+                editDialog.dismiss();
+
+                if (returnToList) {
+                    showTimerListDialog();
+                }
+            });
+        });
+
+        editDialog.show();
+    }
+
+    private void showTimerSoundSelectionDialog(final TimerItem timer, final Button btnSoundRef) {
+        currentEditingTimer = timer;
+        currentTimerSoundBtnRef = btnSoundRef;
+
+        List<SoundItem> soundList = getBuiltInSounds();
+        if (timer.isCustomSound() && !timer.getSoundPath().isEmpty()) {
+            soundList.add(0, new SoundItem(timer.getSoundName() + " (" + getString(R.string.btn_select_sound_prefix, "").replace(": ", "").trim() + ")", timer.getSoundPath(), false));
+        }
+
+        String[] soundNames = new String[soundList.size()];
+        int selectedIndex = 0;
+        for (int i = 0; i < soundList.size(); i++) {
+            soundNames[i] = soundList.get(i).name;
+            if (soundList.get(i).path.equals(timer.getSoundPath())) {
+                selectedIndex = i;
+            }
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.dialog_timer_sound_title))
+                .setSingleChoiceItems(soundNames, selectedIndex, (dialog, which) -> {
+                    SoundItem item = soundList.get(which);
+                    timer.setSoundPath(item.path);
+                    timer.setSoundName(item.name.split(" \\(")[0]);
+                    timer.setCustomSound(!item.isAsset);
+                    playPreviewSound(item);
+                })
+                .setPositiveButton(getString(R.string.btn_ok), (dialog, which) -> {
+                    stopPreviewSound();
+                    if (btnSoundRef != null) {
+                        btnSoundRef.setText(getString(R.string.btn_timer_select_sound, timer.getSoundName()));
+                    }
+                })
+                .setNeutralButton(getString(R.string.btn_select_storage), (dialog, which) -> {
+                    stopPreviewSound();
+                    openTimerStorageFilePicker();
+                })
+                .setNegativeButton(getString(R.string.btn_cancel), (dialog, which) -> stopPreviewSound())
+                .setOnDismissListener(dialog -> stopPreviewSound())
+                .show();
+    }
+
+    private void openTimerStorageFilePicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("audio/*");
+            startActivityForResult(intent, REQUEST_CODE_PICK_TIMER_AUDIO);
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+                fallback.setType("audio/*");
+                startActivityForResult(fallback, REQUEST_CODE_PICK_TIMER_AUDIO);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private void showTimerControllerDialog(final TimerItem timer) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_timer_controller, null);
+        final TextView txtName = dialogView.findViewById(R.id.txtTimerCtrlName);
+        final TextView txtStatus = dialogView.findViewById(R.id.txtTimerCtrlStatus);
+        final TextView txtCountdown = dialogView.findViewById(R.id.txtTimerCtrlCountdown);
+        final Button btnAction = dialogView.findViewById(R.id.btnTimerCtrlAction);
+        final Button btnStop = dialogView.findViewById(R.id.btnTimerCtrlStop);
+        final Button btnClose = dialogView.findViewById(R.id.btnTimerCtrlClose);
+
+        String name = (timer.getName() == null || timer.getName().isEmpty()) ?
+                getString(R.string.btn_timer) : timer.getName();
+        txtName.setText(name);
+
+        currentCtrlTimerId = timer.getId();
+        txtCurrentTimerCountdown = txtCountdown;
+        txtCurrentTimerStatus = txtStatus;
+        btnCurrentTimerAction = btnAction;
+
+        updateControllerViews(timer);
+
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+
+        currentTimerCtrlDialog = dialog;
+
+        btnAction.setOnClickListener(v -> {
+            TimerItem latest = TimerManagerHelper.getTimerById(MainActivity.this, timer.getId());
+            if (latest == null) latest = timer;
+
+            int state = latest.getState();
+            if (state == TimerItem.STATE_IDLE || state == TimerItem.STATE_FINISHED) {
+                checkExactAlarmPermission();
+                TimerService.startTimer(MainActivity.this, latest.getId());
+                latest.setState(TimerItem.STATE_RUNNING);
+                latest.setEndTimestamp(System.currentTimeMillis() + (latest.getMinutes() * 60 * 1000L));
+            } else if (state == TimerItem.STATE_RUNNING) {
+                TimerService.pauseTimer(MainActivity.this, latest.getId());
+                latest.setState(TimerItem.STATE_PAUSED);
+            } else if (state == TimerItem.STATE_PAUSED) {
+                TimerService.resumeTimer(MainActivity.this, latest.getId());
+                latest.setState(TimerItem.STATE_RUNNING);
+            }
+            updateControllerViews(latest);
+        });
+
+        btnStop.setOnClickListener(v -> {
+            TimerService.stopTimer(MainActivity.this, timer.getId());
+            TimerItem latest = TimerManagerHelper.getTimerById(MainActivity.this, timer.getId());
+            if (latest != null) {
+                updateControllerViews(latest);
+            } else {
+                timer.setState(TimerItem.STATE_IDLE);
+                timer.setRemainingMillis(timer.getMinutes() * 60 * 1000L);
+                updateControllerViews(timer);
+            }
+            Toast.makeText(MainActivity.this, getString(R.string.timer_status_idle), Toast.LENGTH_SHORT).show();
+        });
+
+        Button btnList = dialogView.findViewById(R.id.btnTimerCtrlList);
+        if (btnList != null) {
+            btnList.setOnClickListener(v -> {
+                dialog.dismiss();
+                showTimerListDialog();
+            });
+        }
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.setOnDismissListener(d -> {
+            currentTimerCtrlDialog = null;
+            currentCtrlTimerId = -1;
+            txtCurrentTimerCountdown = null;
+            txtCurrentTimerStatus = null;
+            btnCurrentTimerAction = null;
+        });
+
+        dialog.show();
+    }
+
+    private void updateControllerViews(TimerItem t) {
+        if (txtCurrentTimerCountdown != null) {
+            txtCurrentTimerCountdown.setText(t.getFormattedRemainingTime());
+        }
+
+        if (txtCurrentTimerStatus == null || btnCurrentTimerAction == null) {
+            return;
+        }
+
+        switch (t.getState()) {
+            case TimerItem.STATE_RUNNING:
+                txtCurrentTimerStatus.setText(getString(R.string.timer_status_running));
+                btnCurrentTimerAction.setText(getString(R.string.btn_timer_pause));
+                break;
+            case TimerItem.STATE_PAUSED:
+                txtCurrentTimerStatus.setText(getString(R.string.timer_status_paused));
+                btnCurrentTimerAction.setText(getString(R.string.btn_timer_resume));
+                break;
+            case TimerItem.STATE_FINISHED:
+                txtCurrentTimerStatus.setText(getString(R.string.timer_status_finished));
+                btnCurrentTimerAction.setText(getString(R.string.btn_timer_start));
+                break;
+            case TimerItem.STATE_IDLE:
+            default:
+                txtCurrentTimerStatus.setText(getString(R.string.timer_status_idle));
+                btnCurrentTimerAction.setText(getString(R.string.btn_timer_start));
+                break;
+        }
+    }
+
+    private void updateTimerControllerDialogIfOpen() {
+        if (currentTimerCtrlDialog != null && currentTimerCtrlDialog.isShowing() && currentCtrlTimerId != -1) {
+            TimerItem t = TimerManagerHelper.getTimerById(this, currentCtrlTimerId);
+            if (t != null) {
+                runOnUiThread(() -> {
+                    updateControllerViews(t);
+                });
+            }
+        }
+    }
+
     // ==================== AUTO UPDATE IMPLEMENTATION ====================
 
     private int dpToPx(int dp) {
@@ -2385,6 +2901,12 @@ public class MainActivity extends Activity {
         stopPreviewSound();
         stopAlarmPreview();
         stopVoicePreview();
+        if (timerTickReceiver != null) {
+            try {
+                unregisterReceiver(timerTickReceiver);
+            } catch (Exception ignored) {}
+            timerTickReceiver = null;
+        }
         if (previewTts != null) {
             previewTts.stop();
             previewTts.shutdown();
