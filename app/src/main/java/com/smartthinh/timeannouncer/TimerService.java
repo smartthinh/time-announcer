@@ -31,16 +31,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-public class TimerService extends Service implements TextToSpeech.OnInitListener {
+public class TimerService extends Service {
 
     private static final String TAG = "TimerService";
     private static final String CHANNEL_ID_TIMER = "TimerChannel";
+    public static final String CHANNEL_ID_TIMER_ALERT = "timer_alert_channel";
     private static final int NOTIF_ID_TIMER = 1002;
 
     public static final String ACTION_START_TIMER = "com.smartthinh.timeannouncer.ACTION_START_TIMER";
     public static final String ACTION_PAUSE_TIMER = "com.smartthinh.timeannouncer.ACTION_PAUSE_TIMER";
     public static final String ACTION_RESUME_TIMER = "com.smartthinh.timeannouncer.ACTION_RESUME_TIMER";
     public static final String ACTION_STOP_TIMER = "com.smartthinh.timeannouncer.ACTION_STOP_TIMER";
+    public static final String ACTION_RESTART_TIMER = "com.smartthinh.timeannouncer.ACTION_RESTART_TIMER";
     public static final String ACTION_TIMER_RING = "com.smartthinh.timeannouncer.ACTION_TIMER_RING";
     public static final String ACTION_DISMISS_ALERT = "com.smartthinh.timeannouncer.ACTION_DISMISS_ALERT";
 
@@ -51,6 +53,7 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
 
     // Auto-silence timer alert after 60 seconds (1 minute), much shorter than alarm's 10 minutes
     private static final long TIMER_AUTO_SILENCE_TIMEOUT_MS = 60 * 1000L;
+    private static final long TTS_REPEAT_DELAY_MS = 1000L; // 1000ms delay between readings, identical to alarm
 
     private TimerItem activeTimer;
     private long activeTimerId = -1;
@@ -100,6 +103,13 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
     public static void stopTimer(Context context, long timerId) {
         Intent intent = new Intent(context, TimerService.class);
         intent.setAction(ACTION_STOP_TIMER);
+        intent.putExtra(EXTRA_TIMER_ID, timerId);
+        startServiceInternal(context, intent);
+    }
+
+    public static void restartTimer(Context context, long timerId) {
+        Intent intent = new Intent(context, TimerService.class);
+        intent.setAction(ACTION_RESTART_TIMER);
         intent.putExtra(EXTRA_TIMER_ID, timerId);
         startServiceInternal(context, intent);
     }
@@ -164,6 +174,9 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
                     break;
                 case ACTION_STOP_TIMER:
                     handleStopTimer(timerId);
+                    break;
+                case ACTION_RESTART_TIMER:
+                    handleRestartTimer(timerId);
                     break;
                 case ACTION_TIMER_RING:
                     handleTimerRing(timerId);
@@ -252,6 +265,12 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
         stopSelf();
     }
 
+    private void handleRestartTimer(long timerId) {
+        stopRinging();
+        TimerAlertActivity.closeActivity();
+        handleStartTimer(timerId);
+    }
+
     private void handleTimerRing(long timerId) {
         cancelAlarmManagerExact();
         stopCountdownLoop();
@@ -264,17 +283,41 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
         activeTimer.setRemainingMillis(0);
         TimerManagerHelper.saveOrUpdateTimer(this, activeTimer);
 
+        // 1. Wake screen up
+        TimerReceiver.acquireWakeLock(this);
+
+        // 2. Build high priority alert notification with FullScreenIntent
+        createAlertNotificationChannel();
+        Notification alertNotif = buildFinishedNotification();
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(NOTIF_ID_TIMER, alertNotif, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIF_ID_TIMER, alertNotif);
+        }
+
+        // 3. Start audio, vibration, and TTS loop
         startRinging();
+
+        // 4. Broadcast tick to notify UI
         broadcastTick();
 
-        // Launch alert activity
+        // 5. Directly launch TimerAlertActivity
+        launchAlertActivity();
+    }
+
+    private void launchAlertActivity() {
+        Intent alertIntent = new Intent(this, TimerAlertActivity.class);
+        alertIntent.putExtra(EXTRA_TIMER_ID, activeTimerId);
+        alertIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK |
+                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                Intent.FLAG_ACTIVITY_SINGLE_TOP |
+                Intent.FLAG_ACTIVITY_NO_USER_ACTION
+        );
         try {
-            Intent alertIntent = new Intent(this, TimerAlertActivity.class);
-            alertIntent.putExtra(EXTRA_TIMER_ID, timerId);
-            alertIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(alertIntent);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to launch TimerAlertActivity", e);
+            Log.e(TAG, "Failed to launch TimerAlertActivity from TimerService", e);
         }
     }
 
@@ -443,11 +486,10 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
 
         // 3. TTS Announcement if message exists
         if (activeTimer != null && !activeTimer.getMessage().isEmpty()) {
-            startTtsLoop(activeTimer.getMessage());
+            if (isTtsReady) {
+                speakTtsMessage();
+            }
         }
-
-        // 4. Update notification with Dismiss action
-        updateNotificationForFinished();
     }
 
     private void stopAutoSilence() {
@@ -480,22 +522,49 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
     private void initTts() {
         SharedPreferences prefs = MainActivity.getSafeSharedPreferences(this);
         String engine = prefs.getString("tts_engine", "");
-        try {
-            if (!engine.isEmpty()) {
-                tts = new TextToSpeech(this, this, engine);
-            } else {
-                tts = new TextToSpeech(this, this);
+
+        ttsRepeatRunnable = () -> {
+            if (isTtsReady && isRinging && activeTimer != null && !activeTimer.getMessage().isEmpty()) {
+                speakTtsMessage();
             }
-        } catch (Exception e) {
-            tts = new TextToSpeech(this, this);
-        }
+        };
+
+        tts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                isTtsReady = true;
+                applyTtsSettings();
+
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override
+                    public void onStart(String utteranceId) {}
+
+                    @Override
+                    public void onDone(String utteranceId) {
+                        scheduleNextTtsSpeak();
+                    }
+
+                    @Override
+                    public void onError(String utteranceId) {
+                        scheduleNextTtsSpeak();
+                    }
+
+                    @Override
+                    public void onError(String utteranceId, int errorCode) {
+                        scheduleNextTtsSpeak();
+                    }
+                });
+
+                if (isRinging && activeTimer != null && !activeTimer.getMessage().isEmpty()) {
+                    speakTtsMessage();
+                }
+            }
+        }, engine.isEmpty() ? null : engine);
     }
 
-    @Override
-    public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
-            isTtsReady = true;
-            applyTtsSettings();
+    private void scheduleNextTtsSpeak() {
+        if (ttsRepeatHandler != null && isTtsReady && isRinging) {
+            ttsRepeatHandler.removeCallbacks(ttsRepeatRunnable);
+            ttsRepeatHandler.postDelayed(ttsRepeatRunnable, TTS_REPEAT_DELAY_MS);
         }
     }
 
@@ -512,6 +581,19 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
             tts.setSpeechRate(rate);
             tts.setPitch(pitch);
 
+            String voiceName = prefs.getString("tts_voice_name", "");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !voiceName.isEmpty()) {
+                Set<Voice> voices = tts.getVoices();
+                if (voices != null) {
+                    for (Voice v : voices) {
+                        if (v.getName().equals(voiceName)) {
+                            tts.setVoice(v);
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 AudioAttributes aab = new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -522,20 +604,28 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
         } catch (Exception ignored) {}
     }
 
-    private void startTtsLoop(final String message) {
-        stopTtsLoop();
-        ttsRepeatRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (!isRinging || tts == null || !isTtsReady) return;
-                applyTtsSettings();
+    private void speakTtsMessage() {
+        if (!isRinging || tts == null || !isTtsReady || activeTimer == null || activeTimer.getMessage().isEmpty()) return;
+        applyTtsSettings();
+        try {
+            int result;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 Bundle params = new Bundle();
                 params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_ALARM);
-                tts.speak(message, TextToSpeech.QUEUE_FLUSH, params, "TimerTTS");
-                ttsRepeatHandler.postDelayed(this, 4000);
+                result = tts.speak(activeTimer.getMessage(), TextToSpeech.QUEUE_FLUSH, params, "TimerTTS");
+            } else {
+                java.util.HashMap<String, String> params = new java.util.HashMap<>();
+                params.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_ALARM));
+                params.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "TimerTTS");
+                result = tts.speak(activeTimer.getMessage(), TextToSpeech.QUEUE_FLUSH, params);
             }
-        };
-        ttsRepeatHandler.postDelayed(ttsRepeatRunnable, 1000);
+            if (result != TextToSpeech.SUCCESS) {
+                scheduleNextTtsSpeak();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error speaking TTS", e);
+            scheduleNextTtsSpeak();
+        }
     }
 
     private void stopTtsLoop() {
@@ -547,6 +637,84 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
                 tts.stop();
             } catch (Exception ignored) {}
         }
+    }
+
+    private void createAlertNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null && nm.getNotificationChannel(CHANNEL_ID_TIMER_ALERT) == null) {
+                NotificationChannel channel = new NotificationChannel(
+                        CHANNEL_ID_TIMER_ALERT,
+                        getString(R.string.timer_channel_name),
+                        NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription(getString(R.string.timer_channel_desc));
+                channel.setSound(null, null);
+                channel.enableVibration(false);
+                channel.setBypassDnd(true);
+                channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                nm.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    private Notification buildFinishedNotification() {
+        String timerName = (activeTimer != null && !activeTimer.getName().isEmpty())
+                ? activeTimer.getName()
+                : getString(R.string.btn_timer);
+
+        Intent alertIntent = new Intent(this, TimerAlertActivity.class);
+        alertIntent.putExtra(EXTRA_TIMER_ID, activeTimerId);
+        alertIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK |
+                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                Intent.FLAG_ACTIVITY_SINGLE_TOP |
+                Intent.FLAG_ACTIVITY_NO_USER_ACTION
+        );
+
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            piFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
+                this,
+                (int) (activeTimerId % Integer.MAX_VALUE),
+                alertIntent,
+                piFlags
+        );
+
+        Intent restartIntent = new Intent(this, TimerService.class);
+        restartIntent.setAction(ACTION_RESTART_TIMER);
+        restartIntent.putExtra(EXTRA_TIMER_ID, activeTimerId);
+        PendingIntent restartPi = PendingIntent.getService(this, 102, restartIntent, piFlags);
+
+        Intent dismissIntent = new Intent(this, TimerService.class);
+        dismissIntent.setAction(ACTION_DISMISS_ALERT);
+        dismissIntent.putExtra(EXTRA_TIMER_ID, activeTimerId);
+        PendingIntent dismissPi = PendingIntent.getService(this, 101, dismissIntent, piFlags);
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(this, CHANNEL_ID_TIMER_ALERT);
+        } else {
+            builder = new Notification.Builder(this);
+        }
+
+        builder.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle(getString(R.string.timer_finished_title))
+                .setContentText(getString(R.string.timer_finished_notif_title, timerName))
+                .setPriority(Notification.PRIORITY_MAX)
+                .setCategory(Notification.CATEGORY_ALARM)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setContentIntent(fullScreenPendingIntent)
+                .setFullScreenIntent(fullScreenPendingIntent, true)
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .addAction(android.R.drawable.ic_media_play, getString(R.string.btn_timer_restart_action), restartPi)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.btn_timer_dismiss_action), dismissPi);
+
+        return builder.build();
     }
 
     private void createNotificationChannel() {
@@ -621,38 +789,6 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
         Notification notif = buildNotification(title, getString(R.string.timer_remaining_prefix, timeStr + status));
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm != null) nm.notify(NOTIF_ID_TIMER, notif);
-    }
-
-    private void updateNotificationForFinished() {
-        if (activeTimer == null) return;
-        Intent dismissIntent = new Intent(this, TimerService.class);
-        dismissIntent.setAction(ACTION_DISMISS_ALERT);
-        dismissIntent.putExtra(EXTRA_TIMER_ID, activeTimer.getId());
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent dismissPi = PendingIntent.getService(this, 101, dismissIntent, flags);
-
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(this, CHANNEL_ID_TIMER);
-        } else {
-            builder = new Notification.Builder(this);
-        }
-
-        String timerName = activeTimer.getName();
-        if (timerName.isEmpty()) {
-            timerName = getString(R.string.timer_default_name, activeTimer.getMinutes());
-        }
-
-        builder.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(getString(R.string.timer_finished_notif_title, timerName))
-                .setContentText(getString(R.string.timer_finished_notif_text))
-                .setContentIntent(dismissPi)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.btn_timer_dismiss_action), dismissPi)
-                .setOngoing(true);
-
-        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (nm != null) nm.notify(NOTIF_ID_TIMER, builder.build());
     }
 
     @Override

@@ -108,6 +108,7 @@ public class MainActivity extends Activity {
     private TimerItem currentEditingTimer;
     private Button currentTimerSoundBtnRef;
     private AlertDialog currentTimerCtrlDialog;
+    private AlertDialog currentTimerListDialog;
     private long currentCtrlTimerId = -1;
     private TextView txtCurrentTimerCountdown;
     private TextView txtCurrentTimerStatus;
@@ -312,6 +313,14 @@ public class MainActivity extends Activity {
         // Button "Timer"
         btnTimerList.setOnClickListener(v -> {
             checkExactAlarmPermission();
+            TimerItem finishedTimer = TimerManagerHelper.getFinishedTimer(MainActivity.this);
+            if (finishedTimer != null) {
+                Intent alertIntent = new Intent(MainActivity.this, TimerAlertActivity.class);
+                alertIntent.putExtra(TimerService.EXTRA_TIMER_ID, finishedTimer.getId());
+                alertIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(alertIntent);
+                return;
+            }
             TimerItem runningTimer = TimerManagerHelper.getActiveRunningTimer(MainActivity.this);
             if (runningTimer != null) {
                 showTimerControllerDialog(runningTimer);
@@ -325,6 +334,21 @@ public class MainActivity extends Activity {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (TimerService.ACTION_TIMER_TICK.equals(intent.getAction())) {
+                    int state = intent.getIntExtra("state", -1);
+                    long tId = intent.getLongExtra(TimerService.EXTRA_TIMER_ID, -1);
+                    if (state == TimerItem.STATE_FINISHED && tId != -1) {
+                        if (currentTimerCtrlDialog != null && currentTimerCtrlDialog.isShowing()) {
+                            currentTimerCtrlDialog.dismiss();
+                        }
+                        if (currentTimerListDialog != null && currentTimerListDialog.isShowing()) {
+                            currentTimerListDialog.dismiss();
+                        }
+                        Intent alertIntent = new Intent(MainActivity.this, TimerAlertActivity.class);
+                        alertIntent.putExtra(TimerService.EXTRA_TIMER_ID, tId);
+                        alertIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        startActivity(alertIntent);
+                        return;
+                    }
                     updateTimerControllerDialogIfOpen();
                 }
             }
@@ -365,7 +389,14 @@ public class MainActivity extends Activity {
             if (timerId != -1) {
                 TimerItem timer = TimerManagerHelper.getTimerById(this, timerId);
                 if (timer != null) {
-                    showTimerControllerDialog(timer);
+                    if (timer.getState() == TimerItem.STATE_FINISHED) {
+                        Intent alertIntent = new Intent(this, TimerAlertActivity.class);
+                        alertIntent.putExtra(TimerService.EXTRA_TIMER_ID, timerId);
+                        alertIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        startActivity(alertIntent);
+                    } else {
+                        showTimerControllerDialog(timer);
+                    }
                 }
             }
         }
@@ -2105,7 +2136,14 @@ public class MainActivity extends Activity {
 
                         btnTimerItem.setOnClickListener(v -> {
                             dialog.dismiss();
-                            showTimerControllerDialog(timer);
+                            if (timer.getState() == TimerItem.STATE_FINISHED) {
+                                Intent alertIntent = new Intent(MainActivity.this, TimerAlertActivity.class);
+                                alertIntent.putExtra(TimerService.EXTRA_TIMER_ID, timer.getId());
+                                alertIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                startActivity(alertIntent);
+                            } else {
+                                showTimerControllerDialog(timer);
+                            }
                         });
 
                         btnTimerItem.setOnLongClickListener(v -> {
@@ -2210,7 +2248,13 @@ public class MainActivity extends Activity {
             }
         };
         listRefreshHandler.postDelayed(listRefreshRunnable, 1000);
-        dialog.setOnDismissListener(d -> listRefreshHandler.removeCallbacks(listRefreshRunnable));
+        currentTimerListDialog = dialog;
+        dialog.setOnDismissListener(d -> {
+            listRefreshHandler.removeCallbacks(listRefreshRunnable);
+            if (currentTimerListDialog == dialog) {
+                currentTimerListDialog = null;
+            }
+        });
 
         dialog.show();
     }

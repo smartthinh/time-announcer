@@ -53,6 +53,16 @@ public class TimerManagerHelper {
         return null;
     }
 
+    public static TimerItem getFinishedTimer(Context context) {
+        List<TimerItem> list = loadTimers(context);
+        for (TimerItem item : list) {
+            if (item.getState() == TimerItem.STATE_FINISHED) {
+                return item;
+            }
+        }
+        return null;
+    }
+
     public static TimerItem getActiveRunningTimer(Context context) {
         List<TimerItem> list = loadTimers(context);
         for (TimerItem item : list) {

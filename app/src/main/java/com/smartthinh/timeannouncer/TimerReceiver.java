@@ -23,18 +23,21 @@ public class TimerReceiver extends BroadcastReceiver {
     }
 
     public static synchronized void acquireWakeLock(Context context) {
-        if (wakeLock == null) {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            return;
+        }
+        try {
             PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
             if (pm != null) {
                 wakeLock = pm.newWakeLock(
-                        PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                        "TimeAnnouncer::TimerWakeLock"
+                        PowerManager.FULL_WAKE_LOCK |
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP |
+                        PowerManager.ON_AFTER_RELEASE,
+                        "TimeAnnouncer:TimerWakeLock"
                 );
+                wakeLock.acquire(60 * 1000L); // 1 minute max
             }
-        }
-        if (wakeLock != null && !wakeLock.isHeld()) {
-            wakeLock.acquire(10 * 60 * 1000L); // 10 minutes max
-        }
+        } catch (Exception ignored) {}
     }
 
     public static synchronized void releaseWakeLock() {
