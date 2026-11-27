@@ -69,6 +69,13 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
     private Handler autoSilenceHandler;
     private Runnable autoSilenceRunnable;
 
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        SharedPreferences prefs = MainActivity.getSafeSharedPreferences(newBase);
+        String lang = prefs.getString("app_language", "en");
+        super.attachBaseContext(MainActivity.updateLocaleContext(newBase, lang));
+    }
+
     public static void startTimer(Context context, long timerId) {
         Intent intent = new Intent(context, TimerService.class);
         intent.setAction(ACTION_START_TIMER);
@@ -131,7 +138,7 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
         ttsRepeatHandler = new Handler(Looper.getMainLooper());
         initTts();
 
-        Notification notif = buildNotification("Time Announcer", "Bộ hẹn giờ đang sẵn sàng");
+        Notification notif = buildNotification(getString(R.string.notification_title), getString(R.string.timer_ready_notif));
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(NOTIF_ID_TIMER, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         } else {
@@ -318,8 +325,12 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
 
     private void broadcastTick() {
         Intent tick = new Intent(ACTION_TIMER_TICK);
+        tick.setPackage(getPackageName());
         if (activeTimer != null) {
             tick.putExtra(EXTRA_TIMER_ID, activeTimer.getId());
+            tick.putExtra("remaining_millis", activeTimer.getRemainingMillis());
+            tick.putExtra("state", activeTimer.getState());
+            tick.putExtra("end_timestamp", activeTimer.getEndTimestamp());
         }
         sendBroadcast(tick);
     }
@@ -542,10 +553,10 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID_TIMER,
-                    "Bộ hẹn giờ",
+                    getString(R.string.timer_channel_name),
                     NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Thông báo tiến trình và cảnh báo khi bộ hẹn giờ kết thúc");
+            channel.setDescription(getString(R.string.timer_channel_desc));
             channel.enableVibration(false);
             channel.setSound(null, null);
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -602,9 +613,12 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
     private void updateNotification() {
         if (activeTimer == null) return;
         String title = activeTimer.getName();
+        if (title.isEmpty()) {
+            title = getString(R.string.timer_default_name, activeTimer.getMinutes());
+        }
         String timeStr = activeTimer.getFormattedRemainingTime();
-        String status = (activeTimer.getState() == TimerItem.STATE_PAUSED) ? " (Đã tạm dừng)" : "";
-        Notification notif = buildNotification(title, "Thời gian còn lại: " + timeStr + status);
+        String status = (activeTimer.getState() == TimerItem.STATE_PAUSED) ? getString(R.string.timer_status_paused_suffix) : "";
+        Notification notif = buildNotification(title, getString(R.string.timer_remaining_prefix, timeStr + status));
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm != null) nm.notify(NOTIF_ID_TIMER, notif);
     }
@@ -625,11 +639,16 @@ public class TimerService extends Service implements TextToSpeech.OnInitListener
             builder = new Notification.Builder(this);
         }
 
+        String timerName = activeTimer.getName();
+        if (timerName.isEmpty()) {
+            timerName = getString(R.string.timer_default_name, activeTimer.getMinutes());
+        }
+
         builder.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("Hẹn giờ hoàn thành: " + activeTimer.getName())
-                .setContentText("Bấm để tắt chuông và rung")
+                .setContentTitle(getString(R.string.timer_finished_notif_title, timerName))
+                .setContentText(getString(R.string.timer_finished_notif_text))
                 .setContentIntent(dismissPi)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Tắt", dismissPi)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.btn_timer_dismiss_action), dismissPi)
                 .setOngoing(true);
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);

@@ -15,8 +15,10 @@ public class TimerAlertActivity extends Activity {
     private static TimerAlertActivity sActiveActivity;
 
     private TextView txtAlertTitle;
+    private TextView txtAlertTime;
     private TextView txtAlertName;
     private TextView txtAlertMessage;
+    private Button btnRestart;
     private Button btnDismiss;
 
     private long timerId = -1;
@@ -58,12 +60,16 @@ public class TimerAlertActivity extends Activity {
         TimerItem timer = TimerManagerHelper.getTimerById(this, timerId);
 
         txtAlertTitle = findViewById(R.id.txtTimerAlertTitle);
+        txtAlertTime = findViewById(R.id.txtTimerAlertTime);
         txtAlertName = findViewById(R.id.txtTimerAlertName);
         txtAlertMessage = findViewById(R.id.txtTimerAlertMessage);
+        btnRestart = findViewById(R.id.btnTimerAlertRestart);
         btnDismiss = findViewById(R.id.btnDismissTimerAlert);
 
         if (timer != null) {
-            txtAlertName.setText(timer.getName());
+            String name = (timer.getName() == null || timer.getName().isEmpty()) ?
+                    getString(R.string.btn_timer) : timer.getName();
+            txtAlertName.setText(name + " (" + timer.getMinutes() + " " + getString(R.string.hint_timer_minutes).toLowerCase() + ")");
             if (!timer.getMessage().isEmpty()) {
                 txtAlertMessage.setVisibility(View.VISIBLE);
                 txtAlertMessage.setText(timer.getMessage());
@@ -72,10 +78,24 @@ public class TimerAlertActivity extends Activity {
             }
         }
 
+        btnRestart.setOnClickListener(v -> {
+            TimerService.dismissAlert(TimerAlertActivity.this, timerId);
+            if (timerId != -1) {
+                TimerService.startTimer(TimerAlertActivity.this, timerId);
+            }
+            finish();
+        });
+
         btnDismiss.setOnClickListener(v -> {
             TimerService.dismissAlert(TimerAlertActivity.this, timerId);
             finish();
         });
+    }
+
+    @Override
+    public void onBackPressed() {
+        TimerService.dismissAlert(this, timerId);
+        finish();
     }
 
     @Override

@@ -25,6 +25,8 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
@@ -111,6 +113,8 @@ public class MainActivity extends Activity {
     private TextView txtCurrentTimerStatus;
     private Button btnCurrentTimerAction;
     private BroadcastReceiver timerTickReceiver;
+    private Handler timerUiHandler;
+    private Runnable timerUiRunnable;
 
     // Update button and download thread
     private Button btnCheckUpdate;
@@ -677,7 +681,7 @@ public class MainActivity extends Activity {
                 if (currentTimerSoundBtnRef != null) {
                     currentTimerSoundBtnRef.setText(getString(R.string.btn_timer_select_sound, fileName));
                 }
-                playPreviewSound(new SoundItem(fileName, uri.toString(), false));
+                stopPreviewSound();
             }
         }
     }
@@ -774,7 +778,7 @@ public class MainActivity extends Activity {
     }
 
     private void importVoicePackZip(Uri uri, String fileName) {
-        Toast.makeText(this, "Đang xử lý gói giọng nói...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.toast_processing_voice_pack), Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             try {
                 CustomVoiceManager.VoicePack pack = CustomVoiceManager.importZip(MainActivity.this, uri, fileName);
@@ -885,7 +889,7 @@ public class MainActivity extends Activity {
             if (minute == 0) {
                 File file = CustomVoiceManager.getHourlyAudioFile(pack.directory, hour);
                 if (file == null || !file.exists()) {
-                    Toast.makeText(this, "Không tìm thấy tệp âm thanh giờ đúng", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.toast_voice_hourly_missing), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 previewVoicePlayer1 = new MediaPlayer();
@@ -899,7 +903,7 @@ public class MainActivity extends Activity {
                 File hourFile = CustomVoiceManager.getHourAudioFile(pack.directory, hour);
                 File minFile = CustomVoiceManager.getMinuteAudioFile(pack.directory, minute);
                 if (hourFile == null || !hourFile.exists() || minFile == null || !minFile.exists()) {
-                    Toast.makeText(this, "Không tìm thấy tệp âm thanh giờ hoặc phút", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.toast_voice_files_missing), Toast.LENGTH_SHORT).show();
                     return;
                 }
 
@@ -2182,6 +2186,32 @@ public class MainActivity extends Activity {
         btnClose.setOnClickListener(v -> dialog.dismiss());
 
         renderList.run();
+
+        final Handler listRefreshHandler = new Handler(Looper.getMainLooper());
+        final Runnable listRefreshRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (dialog.isShowing()) {
+                    if (!isMultiSelectMode[0]) {
+                        List<TimerItem> currentList = TimerManagerHelper.loadTimers(MainActivity.this);
+                        boolean hasRunning = false;
+                        for (TimerItem ti : currentList) {
+                            if (ti.getState() == TimerItem.STATE_RUNNING) {
+                                hasRunning = true;
+                                break;
+                            }
+                        }
+                        if (hasRunning) {
+                            renderList.run();
+                        }
+                    }
+                    listRefreshHandler.postDelayed(this, 1000);
+                }
+            }
+        };
+        listRefreshHandler.postDelayed(listRefreshRunnable, 1000);
+        dialog.setOnDismissListener(d -> listRefreshHandler.removeCallbacks(listRefreshRunnable));
+
         dialog.show();
     }
 
@@ -2331,6 +2361,43 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void startDialogCountdown(final TimerItem timer) {
+        stopDialogCountdown();
+        if (timerUiHandler == null) {
+            timerUiHandler = new Handler(Looper.getMainLooper());
+        }
+        timerUiRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (currentTimerCtrlDialog != null && currentTimerCtrlDialog.isShowing() && currentCtrlTimerId == timer.getId()) {
+                    TimerItem current = TimerManagerHelper.getTimerById(MainActivity.this, timer.getId());
+                    if (current == null) current = timer;
+
+                    if (current.getState() == TimerItem.STATE_RUNNING) {
+                        long rem = current.getEndTimestamp() - System.currentTimeMillis();
+                        if (rem <= 0) {
+                            current.setState(TimerItem.STATE_FINISHED);
+                            current.setRemainingMillis(0);
+                            updateControllerViews(current);
+                            stopDialogCountdown();
+                            return;
+                        }
+                    }
+                    updateControllerViews(current);
+                    timerUiHandler.postDelayed(this, 500);
+                }
+            }
+        };
+        timerUiHandler.post(timerUiRunnable);
+    }
+
+    private void stopDialogCountdown() {
+        if (timerUiHandler != null && timerUiRunnable != null) {
+            timerUiHandler.removeCallbacks(timerUiRunnable);
+            timerUiRunnable = null;
+        }
+    }
+
     private void showTimerControllerDialog(final TimerItem timer) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_timer_controller, null);
         final TextView txtName = dialogView.findViewById(R.id.txtTimerCtrlName);
@@ -2351,6 +2418,10 @@ public class MainActivity extends Activity {
 
         updateControllerViews(timer);
 
+        if (timer.getState() == TimerItem.STATE_RUNNING) {
+            startDialogCountdown(timer);
+        }
+
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(dialogView)
                 .create();
@@ -2364,23 +2435,44 @@ public class MainActivity extends Activity {
             int state = latest.getState();
             if (state == TimerItem.STATE_IDLE || state == TimerItem.STATE_FINISHED) {
                 checkExactAlarmPermission();
+                long duration = latest.getMinutes() * 60 * 1000L;
+                latest.setRemainingMillis(duration);
+                latest.setEndTimestamp(System.currentTimeMillis() + duration);
+                latest.setState(TimerItem.STATE_RUNNING);
+                TimerManagerHelper.saveOrUpdateTimer(MainActivity.this, latest);
+
                 TimerService.startTimer(MainActivity.this, latest.getId());
-                latest.setState(TimerItem.STATE_RUNNING);
-                latest.setEndTimestamp(System.currentTimeMillis() + (latest.getMinutes() * 60 * 1000L));
+                startDialogCountdown(latest);
             } else if (state == TimerItem.STATE_RUNNING) {
-                TimerService.pauseTimer(MainActivity.this, latest.getId());
+                long rem = Math.max(0, latest.getEndTimestamp() - System.currentTimeMillis());
+                latest.setRemainingMillis(rem);
                 latest.setState(TimerItem.STATE_PAUSED);
+                TimerManagerHelper.saveOrUpdateTimer(MainActivity.this, latest);
+
+                TimerService.pauseTimer(MainActivity.this, latest.getId());
+                stopDialogCountdown();
             } else if (state == TimerItem.STATE_PAUSED) {
-                TimerService.resumeTimer(MainActivity.this, latest.getId());
+                long rem = latest.getRemainingMillis();
+                if (rem <= 0) rem = latest.getMinutes() * 60 * 1000L;
+                latest.setRemainingMillis(rem);
+                latest.setEndTimestamp(System.currentTimeMillis() + rem);
                 latest.setState(TimerItem.STATE_RUNNING);
+                TimerManagerHelper.saveOrUpdateTimer(MainActivity.this, latest);
+
+                TimerService.resumeTimer(MainActivity.this, latest.getId());
+                startDialogCountdown(latest);
             }
             updateControllerViews(latest);
         });
 
         btnStop.setOnClickListener(v -> {
             TimerService.stopTimer(MainActivity.this, timer.getId());
+            stopDialogCountdown();
             TimerItem latest = TimerManagerHelper.getTimerById(MainActivity.this, timer.getId());
             if (latest != null) {
+                latest.setState(TimerItem.STATE_IDLE);
+                latest.setRemainingMillis(latest.getMinutes() * 60 * 1000L);
+                TimerManagerHelper.saveOrUpdateTimer(MainActivity.this, latest);
                 updateControllerViews(latest);
             } else {
                 timer.setState(TimerItem.STATE_IDLE);
@@ -2401,6 +2493,7 @@ public class MainActivity extends Activity {
         btnClose.setOnClickListener(v -> dialog.dismiss());
 
         dialog.setOnDismissListener(d -> {
+            stopDialogCountdown();
             currentTimerCtrlDialog = null;
             currentCtrlTimerId = -1;
             txtCurrentTimerCountdown = null;
@@ -2898,6 +2991,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopDialogCountdown();
         stopPreviewSound();
         stopAlarmPreview();
         stopVoicePreview();

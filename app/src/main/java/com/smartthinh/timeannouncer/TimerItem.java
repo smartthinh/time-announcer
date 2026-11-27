@@ -51,7 +51,7 @@ public class TimerItem implements Serializable {
     }
 
     public String getName() {
-        return (name == null || name.trim().isEmpty()) ? "Hẹn giờ " + minutes + " phút" : name.trim();
+        return name == null ? "" : name.trim();
     }
 
     public String getRawName() {

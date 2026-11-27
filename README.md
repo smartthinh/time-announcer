@@ -25,10 +25,10 @@ The application runs reliably in the background as a foreground service and requ
 - Countdown Timer:
   - Create and configure timers with custom names, duration in minutes, optional completion message read via TTS, independent sound and vibration controls.
   - Sound selection supporting all bundled chime sounds as well as custom audio files chosen directly from device internal storage.
-  - Dedicated controller dialog with real-time countdown display and full playback lifecycle controls: Start, Pause, Resume, and End permanently (resets countdown).
-  - Background execution with live notification updates and full Doze/screen-off exact alarm reliability.
-  - Interactive timer manager dialog supporting tap-to-control, long-press multi-select mode with "Select all", "Delete", and a contextual "Edit" button that automatically appears only when exactly one timer is selected.
-  - Completion alert dialog waking the screen with continuous ringing, rhythmic vibration, optional TTS repeated reading, and an easy one-tap dismiss button.
+  - Dedicated controller dialog with smooth real-time countdown display and full playback lifecycle controls: Start, Pause, Resume, and End permanently (resets countdown).
+  - Background execution with live notification updates, direct notification action buttons ("Pause", "Resume", "End"), and full Doze/screen-off exact alarm reliability.
+  - Interactive timer manager dialog supporting tap-to-control, real-time list ticker, long-press multi-select mode with "Select all", "Delete", and a contextual "Edit" button that automatically appears only when exactly one timer is selected.
+  - Alarm-style completion alert dialog waking the screen with continuous ringing, rhythmic vibration, optional TTS repeated reading, action buttons to "Restart" ("Bấm lại") or "Dismiss" ("Tắt"), and a 1-minute automatic silence timeout.
 - Comprehensive Alarm Clock:
   - Exact time scheduling with hours (0-23) and minutes (0-59) with auto-fill of current time and strict input validation.
   - Inline input hints for hour, minute, snooze repeats, snooze interval, and TTS message.
@@ -107,17 +107,20 @@ Tap the Set alarm button on the main screen to open the alarm manager dialog:
 Tap the Timer button on the main screen to open the timer manager dialog:
 - View all saved timers with their configured duration, current state, and remaining time.
 - Tap any timer to open the controller countdown dialog:
-  - Tap Start to begin counting down.
+  - Tap Start to begin counting down; the remaining time ticks down smoothly in real time.
   - While counting down, the action button dynamically changes to Pause.
   - While paused, tap Resume to continue counting down.
   - Tap End permanently to completely stop and reset the timer back to its initial duration. After ending, you can tap Start again whenever you wish.
-  - Tap Close to dismiss the controller dialog; the timer continues counting down accurately in the background.
-- Long-press any timer to switch into multi-select mode:
+  - Tap Close to dismiss the controller dialog; the timer continues counting down accurately in the background. Tap All timers to open the saved timers list.
+- While a timer is counting down in the background:
+  - Convenient action buttons ("Pause", "Resume", "End") on the status bar notification allow controlling the countdown without opening the app.
+  - Tapping the status bar notification or tapping the Timer button on the main screen opens directly into the active timer controller dialog.
+- Long-press any timer in the list to switch into multi-select mode:
   - Use Select all to select or deselect all timers at once.
   - Tap Delete to remove all selected timers.
   - When exactly ONE timer is selected, the Edit button appears, allowing you to edit that timer's name, minutes, notification text, sound, and vibration settings. If more than one or zero timers are selected, the Edit button automatically hides.
 - Tap Create timer to configure a new timer with name, duration in minutes, completion message, sound toggle (with bundled or internal storage audio picker), and vibration toggle.
-- When the countdown finishes, the screen turns on to display the alert dialog, playing the chosen alert sound and vibrating continuously until you tap Dismiss.
+- When the countdown finishes, the screen turns on to display an alarm-style alert dialog with continuous sound and vibration. Tap Restart ("Bấm lại") to immediately begin timing with that duration again, or tap Dismiss ("Tắt") to stop and exit. If unattended, it automatically silences after 1 minute.
 
 ### 9. Checking for Updates
 The app automatically checks for new updates in the background each time you launch it. You can also tap the Check for updates button on the main screen to check manually at any time:
